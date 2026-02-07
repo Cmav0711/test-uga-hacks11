@@ -48,6 +48,13 @@ namespace ColorDetectionApp
             // Tracking radius for filtering points (adjustable via +/- keys)
             int trackingRadius = 100;
             
+            // No-light detection timeout in seconds (adjustable via [ and ] keys)
+            double noLightTimeout = 3.0;
+            
+            // Track the last time light was detected
+            DateTime? lastLightDetectedTime = null;
+            bool imageExported = false;
+            
             // Open the default camera
             using (var capture = new VideoCapture(0))
             {
@@ -65,9 +72,10 @@ namespace ColorDetectionApp
                 Console.WriteLine($"Resolution: {capture.FrameWidth}x{capture.FrameHeight}");
                 Console.WriteLine("Press 'b' to calibrate with brightest point color");
                 Console.WriteLine("Press '+' to increase tracking radius, '-' to decrease");
+                Console.WriteLine("Press '[' to decrease no-light timeout, ']' to increase");
 
                 using (var frame = new Mat())
-                using (var window = new Window("Brightest Point Tracker - Press 'q' to quit, 'c' to clear, 'b' to calibrate, '+/-' for radius"))
+                using (var window = new Window("Brightest Point Tracker - Press 'q' to quit, 'c' to clear, 'b' to calibrate, '+/-' for radius, '[/]' for timeout"))
                 {
                     while (true)
                     {
@@ -92,6 +100,10 @@ namespace ColorDetectionApp
                             // Add to our collection (already filtered by circle search)
                             brightestPoints.Add(brightestPoint.Value);
                             
+                            // Update last light detected time
+                            lastLightDetectedTime = DateTime.Now;
+                            imageExported = false;
+                            
                             // Get the color at the brightest point
                             var color = GetColorAtPoint(frame, brightestPoint.Value);
                             
@@ -113,6 +125,20 @@ namespace ColorDetectionApp
                                 Cv2.PutText(frame, diffInfo, new OpenCvSharp.Point(10, 85), 
                                            HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 255), 1);
                             }
+                        }
+                        
+                        // Check if light has not been detected for the configured timeout
+                        if (lastLightDetectedTime.HasValue && 
+                            brightestPoints.Count > 0 && 
+                            !imageExported &&
+                            (DateTime.Now - lastLightDetectedTime.Value).TotalSeconds >= noLightTimeout)
+                        {
+                            // Export the drawing to PNG
+                            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                            string filename = $"light_drawing_{timestamp}.png";
+                            ExportDrawingToPng(brightestPoints, (int)capture.FrameWidth, (int)capture.FrameHeight, filename);
+                            Console.WriteLine($"\nNo light detected for {noLightTimeout}s - Drawing exported to: {filename}");
+                            imageExported = true;
                         }
 
                         // Draw lines connecting consecutive points
@@ -136,7 +162,7 @@ namespace ColorDetectionApp
                         }
 
                         // Display frame count and point count
-                        string info = $"Points tracked: {brightestPoints.Count} | Tracking radius: {trackingRadius}px";
+                        string info = $"Points tracked: {brightestPoints.Count} | Tracking radius: {trackingRadius}px | Timeout: {noLightTimeout:F1}s";
                         if (calibratedColor.HasValue)
                         {
                             info += " [CALIBRATED]";
@@ -182,6 +208,18 @@ namespace ColorDetectionApp
                             trackingRadius -= 10;
                             if (trackingRadius < 10) trackingRadius = 10;
                             Console.WriteLine($"Tracking radius decreased to {trackingRadius}px");
+                        }
+                        else if (key == '[' || key == '{')
+                        {
+                            noLightTimeout -= 0.5;
+                            if (noLightTimeout < 0.5) noLightTimeout = 0.5;
+                            Console.WriteLine($"No-light timeout decreased to {noLightTimeout:F1}s");
+                        }
+                        else if (key == ']' || key == '}')
+                        {
+                            noLightTimeout += 0.5;
+                            if (noLightTimeout > 30.0) noLightTimeout = 30.0;
+                            Console.WriteLine($"No-light timeout increased to {noLightTimeout:F1}s");
                         }
                     }
                 }
@@ -259,6 +297,43 @@ namespace ColorDetectionApp
             double dx = p1.X - p2.X;
             double dy = p1.Y - p2.Y;
             return Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        static void ExportDrawingToPng(List<OpenCvSharp.Point> points, int width, int height, string filename)
+        {
+            // Create a black canvas with the same dimensions as the camera frame
+            using (var image = new Image<Rgba32>(width, height))
+            {
+                // Fill with black background
+                image.Mutate(ctx => ctx.BackgroundColor(new Rgba32(0, 0, 0)));
+
+                if (points.Count > 0)
+                {
+                    // Draw lines connecting consecutive points (yellow lines)
+                    image.Mutate(ctx =>
+                    {
+                        for (int i = 1; i < points.Count; i++)
+                        {
+                            var p1 = new PointF(points[i - 1].X, points[i - 1].Y);
+                            var p2 = new PointF(points[i].X, points[i].Y);
+                            ctx.DrawLine(new Rgba32(255, 255, 0), 2, p1, p2);
+                        }
+                    });
+
+                    // Draw all points (cyan circles)
+                    image.Mutate(ctx =>
+                    {
+                        foreach (var point in points)
+                        {
+                            var circle = new SixLabors.ImageSharp.Drawing.EllipsePolygon(new PointF(point.X, point.Y), 3);
+                            ctx.Fill(new Rgba32(0, 255, 255), circle);
+                        }
+                    });
+                }
+
+                // Save the image
+                image.Save(filename);
+            }
         }
 
         static void GenerateSampleImage(string outputPath)

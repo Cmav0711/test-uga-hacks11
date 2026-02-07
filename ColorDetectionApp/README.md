@@ -6,6 +6,8 @@ A C# console application that uses real-time camera tracking or image processing
 
 ### Real-time Camera Mode (New!)
 - **Live Brightest Point Tracking**: Automatically finds and tracks the single brightest point in each camera frame
+- **Automatic PNG Export**: When light is not detected for a configurable timeout (default: 3.0s), the drawn path is automatically saved as a PNG file
+- **Adjustable No-Light Timeout**: Use '[' and ']' keys to change the timeout for automatic PNG export (0.5-30.0s, default: 3.0s)
 - **Circle-based Filtering**: Only accepts points within a configurable radius of the last tracked point, preventing erratic jumps
 - **Adjustable Tracking Radius**: Use '+' and '-' keys to change the tracking circle size (10-500px, default: 100px)
 - **Visual Tracking Circle**: Purple circle overlay shows the current tracking area around the last tracked point
@@ -20,8 +22,10 @@ A C# console application that uses real-time camera tracking or image processing
   - Press 'b' to calibrate with the current brightest point's color
   - Press '+' to increase tracking radius by 10px
   - Press '-' to decrease tracking radius by 10px
+  - Press ']' to increase no-light timeout by 0.5s
+  - Press '[' to decrease no-light timeout by 0.5s
 - **Real-time Overlay**: Shows current camera feed with overlaid tracking information
-- **Frame Statistics**: Displays count of tracked points, tracking radius, and calibration status
+- **Frame Statistics**: Displays count of tracked points, tracking radius, no-light timeout, and calibration status
 
 ### Static Image Mode
 - **Bright Light Detection**: Automatically identifies bright light sources in images
@@ -65,6 +69,8 @@ When run without arguments, the application opens your default camera and tracks
 - **'b'**: Calibrate using the current brightest point's color as baseline
 - **'+' or '='**: Increase tracking radius by 10 pixels (max: 500px)
 - **'-' or '_'**: Decrease tracking radius by 10 pixels (min: 10px)
+- **']' or '}'**: Increase no-light timeout by 0.5 seconds (max: 30.0s)
+- **'[' or '{'**: Decrease no-light timeout by 0.5 seconds (min: 0.5s)
 
 **What you'll see:**
 - Live camera feed
@@ -74,7 +80,8 @@ When run without arguments, the application opens your default camera and tracks
 - Purple circle around last tracked point showing the tracking radius
 - Color information: RGB values of the current brightest point
 - Color difference: When calibrated, shows how much the color has changed from baseline
-- Status text: "Points tracked: X | Tracking radius: Ypx" showing total count and current radius, plus "[CALIBRATED]" status
+- Status text: "Points tracked: X | Tracking radius: Ypx | Timeout: Zs" showing total count, current radius, and no-light timeout, plus "[CALIBRATED]" status
+- Automatic PNG export: When light is not detected for the configured timeout, a PNG file is saved with format: `light_drawing_YYYYMMDD_HHMMSS.png`
 
 ### Static Image Mode
 
@@ -176,8 +183,9 @@ dotnet run [image_path]
 - Tracking light sources in motion with color change detection
 - Calibrating baseline light color for comparison
 - Detecting when light passes through colored objects or filters
-- Interactive light painting applications
-- Laser pointer tracking with path visualization
+- Interactive light painting applications with automatic capture
+- Light drawing/painting - automatically saves your artwork when you turn off the light
+- Laser pointer tracking with path visualization and automatic export
 - Stage light position mapping during performances
 - Real-time quality control for lighting installations
 - Interactive installations and art projects
@@ -211,7 +219,13 @@ The real-time tracking works in a simple, efficient manner:
    - Historical points: Small cyan filled circles (3px radius)
    - Connecting lines: Orange lines (2px width) between consecutive points
    - Tracking circle: Purple circle (2px width) with radius equal to tracking radius around the last tracked point
-   - Text overlays: Shows RGB color values, color difference (if calibrated), total count of tracked points, and current tracking radius
+   - Text overlays: Shows RGB color values, color difference (if calibrated), total count of tracked points, current tracking radius, and no-light timeout
+11. **No-Light Detection & PNG Export**:
+   - Tracks the time when light was last detected
+   - If no bright point is detected for the configured timeout duration (default: 3.0s), automatically exports the tracked path to a PNG file
+   - Exported image shows the complete drawing with yellow connecting lines and cyan point markers on a black background
+   - Files are saved with timestamp: `light_drawing_YYYYMMDD_HHMMSS.png`
+   - Export only happens once per drawing session until light is detected again
 
 ### Static Image Detection
 
