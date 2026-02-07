@@ -18,7 +18,7 @@ namespace ColorDetectionApp
             Console.WriteLine("====================\n");
 
             // Ensure symbol templates exist
-            if (!Directory.Exists("symbols") || Directory.GetFiles("symbols", "*.png").Length == 0)
+            if (!Directory.Exists("symbols") || Directory.GetDirectories("symbols").Length == 0)
             {
                 Console.WriteLine("Generating symbol templates first...");
                 SymbolTemplateGenerator.GenerateExampleTemplates();
