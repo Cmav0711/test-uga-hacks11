@@ -26,6 +26,12 @@ namespace ColorDetectionApp
 
     class Program
     {
+        // Real-time detection constants
+        private const double MIN_REALTIME_CONFIDENCE = 0.40;  // Lower threshold for real-time feedback
+        private const double MIN_SAVED_CONFIDENCE = 0.60;     // Higher threshold for saved results
+        private const int MIN_POINTS_FOR_DETECTION = 10;       // Minimum tracked points before detection starts
+        private const double ASSUMED_CAMERA_FPS = 30.0;        // Assumed framerate for detection interval calculations
+        
         static void Main(string[] args)
         {
             Console.WriteLine("Bright Light Color Detection and Mapping");
@@ -222,7 +228,6 @@ namespace ColorDetectionApp
             string currentDetectedShape = "none";
             double currentShapeConfidence = 0.0;
             OpenCvSharp.Point[] currentShapeContour = Array.Empty<OpenCvSharp.Point>();
-            int minPointsForDetection = 10; // Minimum points needed for detection
             
             // Open the default camera
             using (var capture = new VideoCapture(0))
@@ -357,7 +362,7 @@ namespace ColorDetectionApp
                         // Real-time shape detection (every N frames to avoid performance issues)
                         frameCounter++;
                         if (realtimeDetectionEnabled && 
-                            brightestPoints.Count >= minPointsForDetection && 
+                            brightestPoints.Count >= MIN_POINTS_FOR_DETECTION && 
                             frameCounter % detectionFrameInterval == 0)
                         {
                             try
@@ -370,7 +375,7 @@ namespace ColorDetectionApp
                                 var (shape, confidence, contour) = EnhancedShapeDetector.DetectShapeFromMat(tempMat);
                                 
                                 // Update current detection if confidence is reasonable
-                                if (confidence > 0.40)
+                                if (confidence > MIN_REALTIME_CONFIDENCE)
                                 {
                                     currentDetectedShape = shape;
                                     currentShapeConfidence = confidence;
@@ -392,7 +397,7 @@ namespace ColorDetectionApp
                         }
 
                         // Draw detected shape contour if available
-                        if (currentShapeContour.Length > 0 && brightestPoints.Count >= minPointsForDetection)
+                        if (currentShapeContour.Length > 0 && brightestPoints.Count >= MIN_POINTS_FOR_DETECTION)
                         {
                             // Draw the detected contour in green
                             Cv2.DrawContours(frame, new OpenCvSharp.Point[][] { currentShapeContour }, -1, 
@@ -429,7 +434,7 @@ namespace ColorDetectionApp
                                    HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
                         
                         // Display real-time shape detection info
-                        if (realtimeDetectionEnabled && brightestPoints.Count >= minPointsForDetection)
+                        if (realtimeDetectionEnabled && brightestPoints.Count >= MIN_POINTS_FOR_DETECTION)
                         {
                             string shapeInfo = $"Detected Shape: {currentDetectedShape.ToUpper()} (Confidence: {currentShapeConfidence:P0})";
                             Cv2.PutText(frame, shapeInfo, new OpenCvSharp.Point(10, 60), 
@@ -437,7 +442,7 @@ namespace ColorDetectionApp
                         }
                         else if (realtimeDetectionEnabled)
                         {
-                            string shapeInfo = $"Draw more points for shape detection ({brightestPoints.Count}/{minPointsForDetection})";
+                            string shapeInfo = $"Draw more points for shape detection ({brightestPoints.Count}/{MIN_POINTS_FOR_DETECTION})";
                             Cv2.PutText(frame, shapeInfo, new OpenCvSharp.Point(10, 60), 
                                        HersheyFonts.HersheySimplex, 0.6, new Scalar(128, 128, 128), 1);
                         }
@@ -556,7 +561,7 @@ namespace ColorDetectionApp
                                 detectionFrameInterval -= 5;
                                 if (detectionFrameInterval < 5) detectionFrameInterval = 5;
                             }
-                            Console.WriteLine($"Detection frame interval: every {detectionFrameInterval} frames ({30.0/detectionFrameInterval:F1} times per second)");
+                            Console.WriteLine($"Detection frame interval: every {detectionFrameInterval} frames ({ASSUMED_CAMERA_FPS/detectionFrameInterval:F1} times per second)");
                         }
                     }
                 }
@@ -1049,8 +1054,8 @@ namespace ColorDetectionApp
                 
                 Console.WriteLine($"Enhanced detection: {shape} ({confidence:F3})");
                 
-                // If enhanced detection is confident (>60%), use it
-                if (confidence > 0.60)
+                // If enhanced detection is confident enough for saving (>60%), use it
+                if (confidence > MIN_SAVED_CONFIDENCE)
                 {
                     var detectedSymbols = new List<(string symbolName, double confidence)>
                     {

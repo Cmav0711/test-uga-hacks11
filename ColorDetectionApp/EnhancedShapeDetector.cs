@@ -15,6 +15,8 @@ namespace ColorDetectionApp
         /// Detects shapes in an image using contour analysis and geometric properties.
         /// This method is rotation-invariant, scale-invariant, and works well with
         /// hand-drawn or messy shapes.
+        /// Note: This method discards the contour for backward compatibility with existing code.
+        /// Use DetectShapeFromMat() directly if you need contour information.
         /// </summary>
         /// <param name="imagePath">Path to the image file</param>
         /// <param name="epsilonFactor">Optional contour approximation epsilon factor (default: 0.04)</param>
