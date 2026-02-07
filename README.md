@@ -100,6 +100,7 @@ After selecting both colors, the application will track lights and detect color 
 - Press 's' to take a circular screenshot of the capture region
 - Press 'x' to toggle outlier detection on/off (default: ON)
 - Press 'f' to flip/mirror the camera display
+- Press 'F11' to toggle fullscreen mode
 - Press 'q' to quit
 - Press 'c' to clear the tracked points
 - When light is not detected for the configured timeout, a PNG image is automatically saved
