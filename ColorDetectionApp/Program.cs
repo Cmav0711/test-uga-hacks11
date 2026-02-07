@@ -33,12 +33,30 @@ namespace ColorDetectionApp
 
             if (args.Length == 0)
             {
-                // Prompt user to select target light color
-                LightColor selectedColor = PromptForColorSelection();
+                // Prompt user to select two colors for dual-color tracking
+                Console.WriteLine("Dual-Color Tracking Mode");
+                Console.WriteLine("------------------------");
+                Console.WriteLine("Select PRIMARY color (normal tracking with PNG export on color switch):");
+                LightColor primaryColor = PromptForColorSelection();
                 
-                Console.WriteLine($"\nStarting real-time camera tracking for {selectedColor} light...");
-                Console.WriteLine("Press 'q' to quit, 'c' to clear tracked points\n");
-                RunCameraTracking(selectedColor);
+                Console.WriteLine("\nSelect SECONDARY color (CSV-only export):");
+                LightColor secondaryColor = PromptForColorSelection();
+                
+                if (primaryColor == secondaryColor)
+                {
+                    Console.WriteLine("\nWarning: Primary and secondary colors are the same. Using single-color mode.");
+                    Console.WriteLine($"\nStarting real-time camera tracking for {primaryColor} light...");
+                    Console.WriteLine("Press 'q' to quit, 'c' to clear tracked points\n");
+                    RunCameraTracking(primaryColor);
+                }
+                else
+                {
+                    Console.WriteLine($"\nStarting dual-color tracking:");
+                    Console.WriteLine($"  Primary color: {primaryColor} (normal tracking + PNG on switch)");
+                    Console.WriteLine($"  Secondary color: {secondaryColor} (CSV only)");
+                    Console.WriteLine("Press 'q' to quit, 'c' to clear tracked points\n");
+                    RunDualColorTracking(primaryColor, secondaryColor);
+                }
                 return;
             }
 
@@ -286,6 +304,302 @@ namespace ColorDetectionApp
             }
         }
 
+        static void RunDualColorTracking(LightColor primaryColor, LightColor secondaryColor)
+        {
+            // List to store points for the currently active color
+            var trackedPoints = new List<OpenCvSharp.Point>();
+            
+            // Track which color is currently active
+            LightColor? currentColor = null;
+            
+            // Calibration data - stores baseline color for comparison
+            Scalar? calibratedColor = null;
+            
+            // Tracking radius for filtering points (adjustable via +/- keys)
+            int trackingRadius = 100;
+            
+            // No-light detection timeout in seconds (adjustable via [ and ] keys)
+            double noLightTimeout = 3.0;
+            
+            // Track the last time light was detected
+            DateTime? lastLightDetectedTime = null;
+            bool imageExported = false;
+            
+            // Open the default camera
+            using (var capture = new VideoCapture(0))
+            {
+                if (!capture.IsOpened())
+                {
+                    Console.WriteLine("Error: Could not open camera. Make sure a camera is connected.");
+                    return;
+                }
+
+                // Set camera properties for better performance
+                capture.Set(VideoCaptureProperties.FrameWidth, 640);
+                capture.Set(VideoCaptureProperties.FrameHeight, 480);
+
+                Console.WriteLine($"Camera opened successfully!");
+                Console.WriteLine($"Resolution: {capture.FrameWidth}x{capture.FrameHeight}");
+                Console.WriteLine($"Primary color: {primaryColor}");
+                Console.WriteLine($"Secondary color: {secondaryColor}");
+                Console.WriteLine("Press 'b' to calibrate with brightest point color");
+                Console.WriteLine("Press '+' to increase tracking radius, '-' to decrease");
+                Console.WriteLine("Press '[' to decrease no-light timeout, ']' to increase");
+
+                using (var frame = new Mat())
+                using (var window = new Window($"Dual-Color Tracker (Primary: {primaryColor} / Secondary: {secondaryColor}) - Press 'q' to quit, 'c' to clear"))
+                {
+                    while (true)
+                    {
+                        // Capture frame from camera
+                        capture.Read(frame);
+                        
+                        if (frame.Empty())
+                        {
+                            Console.WriteLine("Warning: Empty frame captured");
+                            break;
+                        }
+
+                        // Find the brightest point in this frame for both colors
+                        var searchCenter = trackedPoints.Count > 0 
+                            ? trackedPoints[trackedPoints.Count - 1] 
+                            : (OpenCvSharp.Point?)null;
+                        
+                        var primaryPoint = FindBrightestPointWithColor(frame, primaryColor, searchCenter, trackingRadius);
+                        var secondaryPoint = FindBrightestPointWithColor(frame, secondaryColor, searchCenter, trackingRadius);
+                        
+                        OpenCvSharp.Point? detectedPoint = null;
+                        LightColor? detectedColor = null;
+                        
+                        // Determine which color is detected (prefer the one that's brighter if both detected)
+                        if (primaryPoint.HasValue && secondaryPoint.HasValue)
+                        {
+                            // Get brightness values to determine which is brighter
+                            var primaryBrightness = GetBrightnessAtPoint(frame, primaryPoint.Value);
+                            var secondaryBrightness = GetBrightnessAtPoint(frame, secondaryPoint.Value);
+                            
+                            if (primaryBrightness >= secondaryBrightness)
+                            {
+                                detectedPoint = primaryPoint;
+                                detectedColor = primaryColor;
+                            }
+                            else
+                            {
+                                detectedPoint = secondaryPoint;
+                                detectedColor = secondaryColor;
+                            }
+                        }
+                        else if (primaryPoint.HasValue)
+                        {
+                            detectedPoint = primaryPoint;
+                            detectedColor = primaryColor;
+                        }
+                        else if (secondaryPoint.HasValue)
+                        {
+                            detectedPoint = secondaryPoint;
+                            detectedColor = secondaryColor;
+                        }
+                        
+                        // Check for color switch
+                        if (detectedColor.HasValue && currentColor.HasValue && detectedColor != currentColor)
+                        {
+                            // Color switched!
+                            Console.WriteLine($"\nColor switch detected: {currentColor} -> {detectedColor}");
+                            
+                            // Export based on what we're switching FROM
+                            if (currentColor == primaryColor && trackedPoints.Count > 0)
+                            {
+                                // Switching from primary to secondary: export PNG + CSV
+                                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                                string pngFilename = $"light_drawing_{currentColor}_{timestamp}.png";
+                                string csvFilename = $"light_drawing_{currentColor}_{timestamp}.csv";
+                                ExportDrawingToPng(trackedPoints, (int)capture.FrameWidth, (int)capture.FrameHeight, pngFilename);
+                                ExportPointsToCsv(trackedPoints, csvFilename);
+                                Console.WriteLine($"Primary color path exported to: {pngFilename} and {csvFilename}");
+                            }
+                            else if (currentColor == secondaryColor && trackedPoints.Count > 0)
+                            {
+                                // Switching from secondary to primary: export CSV only
+                                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                                string csvFilename = $"light_drawing_{currentColor}_{timestamp}.csv";
+                                ExportPointsToCsv(trackedPoints, csvFilename);
+                                Console.WriteLine($"Secondary color points exported to: {csvFilename} (CSV only)");
+                            }
+                            
+                            // Clear points and reset for new color
+                            trackedPoints.Clear();
+                            currentColor = detectedColor;
+                            lastLightDetectedTime = DateTime.Now;
+                            imageExported = false;
+                        }
+                        
+                        if (detectedPoint.HasValue)
+                        {
+                            // Set current color if not set
+                            if (!currentColor.HasValue)
+                            {
+                                currentColor = detectedColor;
+                                Console.WriteLine($"Started tracking {currentColor} color");
+                            }
+                            
+                            // Add to our collection
+                            trackedPoints.Add(detectedPoint.Value);
+                            
+                            // Update last light detected time
+                            lastLightDetectedTime = DateTime.Now;
+                            imageExported = false;
+                            
+                            // Get the color at the brightest point
+                            var color = GetColorAtPoint(frame, detectedPoint.Value);
+                            
+                            // Draw the current brightest point (large, bright green)
+                            var pointColor = new Scalar(0, 255, 0);
+                            Cv2.Circle(frame, detectedPoint.Value, 8, pointColor, -1);
+                            Cv2.Circle(frame, detectedPoint.Value, 10, pointColor, 2);
+                            
+                            // Display color information
+                            string colorInfo = $"Active: {currentColor} | Color: B={color.Val0:F0} G={color.Val1:F0} R={color.Val2:F0}";
+                            Cv2.PutText(frame, colorInfo, new OpenCvSharp.Point(10, 60), 
+                                       HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 255), 1);
+                            
+                            // If calibrated, show color difference
+                            if (calibratedColor.HasValue)
+                            {
+                                double colorDiff = CalculateColorDifference(color, calibratedColor.Value);
+                                string diffInfo = $"Color Diff: {colorDiff:F1}";
+                                Cv2.PutText(frame, diffInfo, new OpenCvSharp.Point(10, 85), 
+                                           HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 255), 1);
+                            }
+                        }
+                        
+                        // Check if light has not been detected for the configured timeout
+                        if (lastLightDetectedTime.HasValue && 
+                            trackedPoints.Count > 0 && 
+                            !imageExported &&
+                            (DateTime.Now - lastLightDetectedTime.Value).TotalSeconds >= noLightTimeout)
+                        {
+                            // Export based on current color
+                            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                            
+                            if (currentColor == primaryColor)
+                            {
+                                // Primary color: export PNG + CSV
+                                string pngFilename = $"light_drawing_{currentColor}_{timestamp}_timeout.png";
+                                string csvFilename = $"light_drawing_{currentColor}_{timestamp}_timeout.csv";
+                                ExportDrawingToPng(trackedPoints, (int)capture.FrameWidth, (int)capture.FrameHeight, pngFilename);
+                                ExportPointsToCsv(trackedPoints, csvFilename);
+                                Console.WriteLine($"\nNo light detected for {noLightTimeout}s - Primary color drawing exported to: {pngFilename}");
+                                Console.WriteLine($"Points data exported to: {csvFilename}");
+                            }
+                            else if (currentColor == secondaryColor)
+                            {
+                                // Secondary color: export CSV only
+                                string csvFilename = $"light_drawing_{currentColor}_{timestamp}_timeout.csv";
+                                ExportPointsToCsv(trackedPoints, csvFilename);
+                                Console.WriteLine($"\nNo light detected for {noLightTimeout}s - Secondary color points exported to: {csvFilename} (CSV only)");
+                            }
+                            
+                            imageExported = true;
+                            
+                            // Clear all points after export
+                            trackedPoints.Clear();
+                            currentColor = null;
+                            Console.WriteLine("All points cleared after export");
+                        }
+
+                        // Draw lines connecting consecutive points
+                        for (int i = 1; i < trackedPoints.Count; i++)
+                        {
+                            Cv2.Line(frame, trackedPoints[i - 1], trackedPoints[i], 
+                                    new Scalar(255, 128, 0), 2);
+                        }
+
+                        // Draw all historical points (smaller, cyan)
+                        foreach (var point in trackedPoints)
+                        {
+                            Cv2.Circle(frame, point, 3, new Scalar(255, 255, 0), -1);
+                        }
+                        
+                        // Draw tracking radius circle around the last tracked point
+                        if (trackedPoints.Count > 0)
+                        {
+                            var lastPoint = trackedPoints[trackedPoints.Count - 1];
+                            Cv2.Circle(frame, lastPoint, trackingRadius, new Scalar(255, 0, 255), 2);
+                        }
+
+                        // Display frame count and point count
+                        string info = $"Points: {trackedPoints.Count} | Radius: {trackingRadius}px | Timeout: {noLightTimeout:F1}s";
+                        if (currentColor.HasValue)
+                        {
+                            info += $" | Active: {currentColor}";
+                        }
+                        if (calibratedColor.HasValue)
+                        {
+                            info += " [CAL]";
+                        }
+                        Cv2.PutText(frame, info, new OpenCvSharp.Point(10, 30), 
+                                   HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
+
+                        // Show the frame
+                        window.ShowImage(frame);
+
+                        // Check for key press
+                        int key = Cv2.WaitKey(1);
+                        if (key == 'q' || key == 'Q' || key == 27) // 'q' or ESC
+                        {
+                            break;
+                        }
+                        else if (key == 'c' || key == 'C')
+                        {
+                            trackedPoints.Clear();
+                            currentColor = null;
+                            Console.WriteLine("Cleared all tracked points");
+                        }
+                        else if (key == 'b' || key == 'B')
+                        {
+                            // Calibration: capture the color of the brightest point
+                            if (detectedPoint.HasValue)
+                            {
+                                calibratedColor = GetColorAtPoint(frame, detectedPoint.Value);
+                                Console.WriteLine($"Calibrated! Baseline color: B={calibratedColor.Value.Val0:F0} G={calibratedColor.Value.Val1:F0} R={calibratedColor.Value.Val2:F0}");
+                            }
+                            else
+                            {
+                                Console.WriteLine("No bright point found for calibration");
+                            }
+                        }
+                        else if (key == '+' || key == '=')
+                        {
+                            trackingRadius += 10;
+                            if (trackingRadius > 500) trackingRadius = 500;
+                            Console.WriteLine($"Tracking radius increased to {trackingRadius}px");
+                        }
+                        else if (key == '-' || key == '_')
+                        {
+                            trackingRadius -= 10;
+                            if (trackingRadius < 10) trackingRadius = 10;
+                            Console.WriteLine($"Tracking radius decreased to {trackingRadius}px");
+                        }
+                        else if (key == '[' || key == '{')
+                        {
+                            noLightTimeout -= 0.5;
+                            if (noLightTimeout < 0.5) noLightTimeout = 0.5;
+                            Console.WriteLine($"No-light timeout decreased to {noLightTimeout:F1}s");
+                        }
+                        else if (key == ']' || key == '}')
+                        {
+                            noLightTimeout += 0.5;
+                            if (noLightTimeout > 30.0) noLightTimeout = 30.0;
+                            Console.WriteLine($"No-light timeout increased to {noLightTimeout:F1}s");
+                        }
+                    }
+                }
+
+                Console.WriteLine($"\nTotal points tracked: {trackedPoints.Count}");
+                Console.WriteLine("Dual-color tracking stopped.");
+            }
+        }
+
         static OpenCvSharp.Point? FindBrightestPoint(Mat frame, OpenCvSharp.Point? circleCenter = null, int circleRadius = 0)
         {
             // Convert to grayscale for easier brightness analysis
@@ -459,6 +773,19 @@ namespace ColorDetectionApp
             double dx = p1.X - p2.X;
             double dy = p1.Y - p2.Y;
             return Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        static double GetBrightnessAtPoint(Mat frame, OpenCvSharp.Point point)
+        {
+            // Ensure the point is within the frame bounds
+            if (point.X >= 0 && point.X < frame.Width && point.Y >= 0 && point.Y < frame.Height)
+            {
+                // Get the BGR color at the point
+                Vec3b color = frame.At<Vec3b>(point.Y, point.X);
+                // Calculate brightness as the maximum of R, G, B values
+                return Math.Max(Math.Max(color.Item0, color.Item1), color.Item2);
+            }
+            return 0;
         }
 
         static void ExportDrawingToPng(List<OpenCvSharp.Point> points, int width, int height, string filename)
