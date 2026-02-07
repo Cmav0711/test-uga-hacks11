@@ -94,6 +94,12 @@ namespace ColorDetectionApp
                 return;
             }
 
+            if (args.Length > 0 && args[0] == "--test-outlier-detection")
+            {
+                TestOutlierDetection.RunTests();
+                return;
+            }
+
             if (args.Length > 0 && args[0] == "--contour-info")
             {
                 if (args.Length < 2)
