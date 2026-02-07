@@ -128,6 +128,9 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press '[' to decrease no-light timeout, ']' to increase");
                 Console.WriteLine("Press 'o' to increase capture circle size, 'i' to decrease");
                 Console.WriteLine("Press 's' to take circular screenshot");
+                
+                // Calculate center point once (frame dimensions don't change)
+                var centerPoint = new OpenCvSharp.Point((int)capture.FrameWidth / 2, (int)capture.FrameHeight / 2);
 
                 using (var frame = new Mat())
                 using (var window = new Window($"Brightest Point Tracker ({targetColor}) - 'q' quit, 'c' clear, 's' circular screenshot, 'o/i' capture size"))
@@ -224,7 +227,6 @@ namespace ColorDetectionApp
                         }
                         
                         // Draw circular screenshot capture region in the center of the screen
-                        var centerPoint = new OpenCvSharp.Point((int)capture.FrameWidth / 2, (int)capture.FrameHeight / 2);
                         Cv2.Circle(frame, centerPoint, captureCircleRadius, new Scalar(0, 255, 255), 3); // Cyan circle
 
                         // Display frame count and point count
