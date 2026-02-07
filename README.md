@@ -12,6 +12,12 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
   - Adjustable circle size using 'o' and 'i' keys (default: 150px, range: 20-500px)
   - Visual indicator showing the capture region
   - Press 's' to capture a circular screenshot
+  - **Automatic Symbol Detection**: Each captured screenshot is analyzed for symbols
+- **Symbol Recognition and Tracking**: 
+  - Automatically detects symbols in captured images using template matching
+  - Compare images against customizable symbol templates in `symbols/` directory
+  - Records all detected symbols in a CSV file with timestamps and confidence scores
+  - Generate example templates with `dotnet run --generate-symbols`
 - **Color Selection**: Choose specific light colors to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any)
 - **Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
 - **Real-time Camera Tracking**: Tracks lights matching the selected color in each camera frame with calibration support
