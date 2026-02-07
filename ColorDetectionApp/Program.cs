@@ -40,7 +40,7 @@ namespace ColorDetectionApp
         static void RunCameraTracking()
         {
             // List to store all brightest points from previous frames
-            var brighestPoints = new List<OpenCvSharp.Point>();
+            var brightestPoints = new List<OpenCvSharp.Point>();
             
             // Open the default camera
             using (var capture = new VideoCapture(0))
@@ -78,7 +78,7 @@ namespace ColorDetectionApp
                         if (brightestPoint.HasValue)
                         {
                             // Add to our collection
-                            brighestPoints.Add(brightestPoint.Value);
+                            brightestPoints.Add(brightestPoint.Value);
                             
                             // Draw the current brightest point (large, bright green)
                             Cv2.Circle(frame, brightestPoint.Value, 8, new Scalar(0, 255, 0), -1);
@@ -86,13 +86,13 @@ namespace ColorDetectionApp
                         }
 
                         // Draw all historical points (smaller, cyan)
-                        foreach (var point in brighestPoints)
+                        foreach (var point in brightestPoints)
                         {
                             Cv2.Circle(frame, point, 3, new Scalar(255, 255, 0), -1);
                         }
 
                         // Display frame count and point count
-                        string info = $"Points tracked: {brighestPoints.Count}";
+                        string info = $"Points tracked: {brightestPoints.Count}";
                         Cv2.PutText(frame, info, new OpenCvSharp.Point(10, 30), 
                                    HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
 
@@ -107,13 +107,13 @@ namespace ColorDetectionApp
                         }
                         else if (key == 'c' || key == 'C')
                         {
-                            brighestPoints.Clear();
+                            brightestPoints.Clear();
                             Console.WriteLine("Cleared all tracked points");
                         }
                     }
                 }
 
-                Console.WriteLine($"\nTotal points tracked: {brighestPoints.Count}");
+                Console.WriteLine($"\nTotal points tracked: {brightestPoints.Count}");
                 Console.WriteLine("Camera tracking stopped.");
             }
         }

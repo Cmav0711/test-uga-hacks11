@@ -138,9 +138,14 @@ dotnet run [image_path]
 
 - .NET 8.0 SDK
 - OpenCvSharp4 4.10.0 (for real-time camera tracking)
-- OpenCvSharp4.runtime.linux-x64 4.10.0 (native OpenCV binaries)
+- Platform-specific OpenCV runtime packages (automatically selected based on your OS):
+  - **Linux**: OpenCvSharp4.runtime.linux-x64
+  - **Windows**: OpenCvSharp4.runtime.win
+  - **macOS**: OpenCvSharp4.runtime.osx-x64
 - SixLabors.ImageSharp 3.1.12 (for static image processing)
 - SixLabors.ImageSharp.Drawing 2.1.7
+
+**Note**: The OpenCV runtime packages are automatically selected based on your platform when you run `dotnet restore` or `dotnet build`. The project file uses MSBuild conditions to ensure the correct runtime is installed for your operating system.
 
 ## Use Cases
 
