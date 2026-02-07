@@ -462,7 +462,7 @@ namespace ColorDetectionApp
                     Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc, mask);
                     
                     // Only return if brightness is above threshold (to avoid noise in dark scenes)
-                    if (maxVal >= 200)
+                    if (maxVal >= 230)
                     {
                         return maxLoc;
                     }
@@ -498,8 +498,8 @@ namespace ColorDetectionApp
                     using (var lowerRedMask = new Mat())
                     using (var upperRedMask = new Mat())
                     {
-                        Cv2.InRange(hsvFrame, new Scalar(0, 70, 100), new Scalar(10, 255, 255), lowerRedMask);
-                        Cv2.InRange(hsvFrame, new Scalar(170, 70, 100), new Scalar(180, 255, 255), upperRedMask);
+                        Cv2.InRange(hsvFrame, new Scalar(0, 100, 180), new Scalar(10, 255, 255), lowerRedMask);
+                        Cv2.InRange(hsvFrame, new Scalar(170, 100, 180), new Scalar(180, 255, 255), upperRedMask);
                         colorMask = new Mat();
                         Cv2.BitwiseOr(lowerRedMask, upperRedMask, colorMask);
                     }
@@ -522,8 +522,8 @@ namespace ColorDetectionApp
                         Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
                         using (var brightMask = new Mat())
                         {
-                            // Create mask for bright pixels (>= 200)
-                            Cv2.Threshold(gray, brightMask, 200, 255, ThresholdTypes.Binary);
+                            // Create mask for bright pixels (>= 230)
+                            Cv2.Threshold(gray, brightMask, 230, 255, ThresholdTypes.Binary);
                             
                             // Combine color and brightness masks
                             using (var combinedMask = new Mat())
@@ -567,17 +567,17 @@ namespace ColorDetectionApp
         {
             // HSV ranges for different colors
             // H: 0-180, S: 0-255, V: 0-255 in OpenCV
-            // Note: Lower saturation thresholds allow detection of dimmer/desaturated lights
+            // Note: Higher saturation and value thresholds for stricter, brighter color detection
             return color switch
             {
                 // Red is handled separately in FindBrightestPointWithColor due to hue wraparound
-                LightColor.Green => (new Scalar(40, 30, 50), new Scalar(80, 255, 255)),    // Green
-                LightColor.Blue => (new Scalar(100, 30, 50), new Scalar(130, 255, 255)),   // Blue
-                LightColor.Yellow => (new Scalar(20, 70, 100), new Scalar(40, 255, 255)),  // Yellow
-                LightColor.Cyan => (new Scalar(80, 30, 50), new Scalar(100, 255, 255)),    // Cyan
-                LightColor.Magenta => (new Scalar(140, 30, 50), new Scalar(170, 255, 255)),// Magenta
-                LightColor.White => (new Scalar(0, 0, 200), new Scalar(180, 30, 255)),     // White (low saturation, high value)
-                _ => (new Scalar(0, 0, 200), new Scalar(180, 255, 255))                    // Any bright (default)
+                LightColor.Green => (new Scalar(40, 80, 150), new Scalar(80, 255, 255)),    // Green - stricter
+                LightColor.Blue => (new Scalar(100, 80, 150), new Scalar(130, 255, 255)),   // Blue - stricter
+                LightColor.Yellow => (new Scalar(20, 100, 180), new Scalar(40, 255, 255)),  // Yellow - stricter
+                LightColor.Cyan => (new Scalar(80, 80, 150), new Scalar(100, 255, 255)),    // Cyan - stricter
+                LightColor.Magenta => (new Scalar(140, 80, 150), new Scalar(170, 255, 255)),// Magenta - stricter
+                LightColor.White => (new Scalar(0, 0, 230), new Scalar(180, 30, 255)),      // White (low saturation, high value) - stricter
+                _ => (new Scalar(0, 0, 230), new Scalar(180, 255, 255))                     // Any bright (default) - stricter
             };
         }
 
@@ -1112,7 +1112,7 @@ namespace ColorDetectionApp
         {
             var regions = new List<BrightRegion>();
             var visited = new bool[image.Width, image.Height];
-            int brightnessThreshold = 200; // Threshold for considering a pixel as "bright"
+            int brightnessThreshold = 230; // Threshold for considering a pixel as "bright"
 
             // Scan the image for bright pixels
             for (int y = 0; y < image.Height; y++)
@@ -1129,7 +1129,7 @@ namespace ColorDetectionApp
                     int minChannel = Math.Min(Math.Min(pixel.R, pixel.G), pixel.B);
                     int saturation = maxChannel - minChannel;
 
-                    if (maxChannel >= brightnessThreshold && saturation < 100)
+                    if (maxChannel >= brightnessThreshold && saturation < 80)
                     {
                         // Found a bright pixel, flood fill to find the entire region
                         var region = FloodFill(image, visited, x, y, brightnessThreshold);
@@ -1171,7 +1171,7 @@ namespace ColorDetectionApp
                         int minChannel = Math.Min(Math.Min(pixel.R, pixel.G), pixel.B);
                         int saturation = maxChannel - minChannel;
 
-                        if (maxChannel >= brightnessThreshold && saturation < 100)
+                        if (maxChannel >= brightnessThreshold && saturation < 80)
                         {
                             visited[nx, ny] = true;
                             queue.Enqueue((nx, ny));
