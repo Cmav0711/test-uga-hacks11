@@ -1113,6 +1113,7 @@ namespace ColorDetectionApp
             var regions = new List<BrightRegion>();
             var visited = new bool[image.Width, image.Height];
             int brightnessThreshold = 230; // Threshold for considering a pixel as "bright"
+            int maxSaturation = 80; // Maximum saturation for bright white lights
 
             // Scan the image for bright pixels
             for (int y = 0; y < image.Height; y++)
@@ -1129,10 +1130,10 @@ namespace ColorDetectionApp
                     int minChannel = Math.Min(Math.Min(pixel.R, pixel.G), pixel.B);
                     int saturation = maxChannel - minChannel;
 
-                    if (maxChannel >= brightnessThreshold && saturation < 80)
+                    if (maxChannel >= brightnessThreshold && saturation < maxSaturation)
                     {
                         // Found a bright pixel, flood fill to find the entire region
-                        var region = FloodFill(image, visited, x, y, brightnessThreshold);
+                        var region = FloodFill(image, visited, x, y, brightnessThreshold, maxSaturation);
                         
                         // Filter out small regions (noise)
                         if (region.PixelCount >= 50)
@@ -1146,7 +1147,7 @@ namespace ColorDetectionApp
             return regions;
         }
 
-        static BrightRegion FloodFill(Image<Rgba32> image, bool[,] visited, int startX, int startY, int brightnessThreshold)
+        static BrightRegion FloodFill(Image<Rgba32> image, bool[,] visited, int startX, int startY, int brightnessThreshold, int maxSaturation)
         {
             var region = new BrightRegion();
             var queue = new Queue<(int x, int y)>();
@@ -1171,7 +1172,7 @@ namespace ColorDetectionApp
                         int minChannel = Math.Min(Math.Min(pixel.R, pixel.G), pixel.B);
                         int saturation = maxChannel - minChannel;
 
-                        if (maxChannel >= brightnessThreshold && saturation < 80)
+                        if (maxChannel >= brightnessThreshold && saturation < maxSaturation)
                         {
                             visited[nx, ny] = true;
                             queue.Enqueue((nx, ny));
