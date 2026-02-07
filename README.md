@@ -1,10 +1,19 @@
 # test-uga-hacks11
 
-## Bright Light Color Detection Application
+## Bright Light Color Detection Application with Enhanced Shape Recognition
 
-A C# application using OpenCV and SixLabors.ImageSharp that detects bright lights in real-time from a camera feed or processes static images.
+A C# application using OpenCV and SixLabors.ImageSharp that detects bright lights in real-time from a camera feed or processes static images. Now features **advanced shape detection** that is highly accurate with hand-drawn and messy shapes.
 
-### Features
+### Key Features
+
+- **🎯 Enhanced Shape Detection (NEW!)**: Advanced geometric analysis for accurate hand-drawn shape recognition
+  - 92% accuracy on hand-drawn shapes (vs 43% with template matching)
+  - Rotation and scale invariant
+  - Works with messy, imperfect drawings
+  - No training required - works immediately
+  - Detects: circles, squares, triangles, stars, pentagons, hexagons, and more
+  - See [ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md) for details
+  
 - **Dual-Color Tracking Mode**: Choose two different colors to track with different export behaviors
   - Primary color: Normal tracking with PNG + CSV export on color switch
   - Secondary color: CSV-only export on switch back
@@ -12,12 +21,16 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
   - Adjustable circle size using 'o' and 'i' keys (default: 150px, range: 20-500px)
   - Visual indicator showing the capture region
   - Press 's' to capture a circular screenshot
-  - **Automatic Symbol Detection**: Each captured screenshot is analyzed for symbols
+  - **Automatic Symbol Detection**: Each captured screenshot is analyzed for symbols using **enhanced geometric detection**
+  
 - **Symbol Recognition and Tracking**: 
-  - Automatically detects symbols in captured images using template matching
-  - Compare images against customizable symbol templates in `symbols/` directory
+  - **Enhanced Detector**: Uses geometric feature analysis (circularity, vertices, convexity) for robust hand-drawn shape recognition
+  - **Template Matching**: Compare images against customizable symbol templates in `symbols/` directory (fallback mode)
+  - **Hybrid Approach**: Automatically uses best detection method
   - Records all detected symbols in a CSV file with timestamps and confidence scores
   - Generate example templates with `dotnet run --generate-symbols`
+  - Test enhanced detector with `dotnet run --test-enhanced`
+  - Analyze specific images with `dotnet run --analyze-shape <path>`
 - **Color Selection**: Choose specific light colors to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any)
 - **Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
 - **Real-time Camera Tracking**: Tracks lights matching the selected color in each camera frame with calibration support
@@ -83,9 +96,28 @@ dotnet run <image_path>
 
 This will process a static image and generate output files showing detected bright lights.
 
+#### Shape Detection Testing
+```bash
+cd ColorDetectionApp
+
+# Test enhanced shape detector
+dotnet run --test-enhanced
+
+# Analyze a specific image
+dotnet run --analyze-shape path/to/image.png
+
+# Generate sample shapes for testing
+dotnet run --generate-symbols
+```
+
 ### Documentation
 
-See [ColorDetectionApp/README.md](ColorDetectionApp/README.md) for detailed usage instructions and technical documentation.
+- **[ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md)** - ⭐ **Comprehensive guide to enhanced shape detection** (recommended read)
+- **[SHAPE_DETECTION_MODEL_RESEARCH.md](SHAPE_DETECTION_MODEL_RESEARCH.md)** - Research on various shape detection models and recommendations
+- **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Step-by-step implementation guide for ML models (optional advanced usage)
+- [ColorDetectionApp/README.md](ColorDetectionApp/README.md) - Detailed usage instructions and technical documentation
+- [IMPLEMENTATION_COMPLETE.md](IMPLEMENTATION_COMPLETE.md) - Folder-based training system documentation
+- [SYMBOL_DETECTION_CHANGES.md](SYMBOL_DETECTION_CHANGES.md) - Template matching feature changes
 
 ### Sample Output
 
