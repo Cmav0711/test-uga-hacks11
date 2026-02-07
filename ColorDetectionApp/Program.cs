@@ -325,7 +325,7 @@ namespace ColorDetectionApp
                     {
                         foreach (var point in points)
                         {
-                            var circle = new RectangleF(point.X - 3, point.Y - 3, 6, 6);
+                            var circle = new SixLabors.ImageSharp.Drawing.EllipsePolygon(new PointF(point.X, point.Y), 3);
                             ctx.Fill(new Rgba32(0, 255, 255), circle);
                         }
                     });
