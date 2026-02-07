@@ -94,6 +94,12 @@ namespace ColorDetectionApp
                 return;
             }
 
+            if (args.Length > 0 && args[0] == "--test-outlier-detection")
+            {
+                TestOutlierDetection.RunTests();
+                return;
+            }
+
             if (args.Length > 0 && args[0] == "--contour-info")
             {
                 if (args.Length < 2)
@@ -200,6 +206,9 @@ namespace ColorDetectionApp
             DateTime? lastLightDetectedTime = null;
             bool imageExported = false;
             
+            // Outlier detection enabled flag (toggle with 'x' key)
+            bool outlierDetectionEnabled = true;
+            
             // Circular screenshot capture region (adjustable via 'O' and 'I' keys)
             int captureCircleRadius = 150;
             
@@ -227,6 +236,7 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press '[' to decrease no-light timeout, ']' to increase");
                 Console.WriteLine("Press 'o' to increase capture circle size, 'i' to decrease");
                 Console.WriteLine("Press 's' to take circular screenshot");
+                Console.WriteLine("Press 'x' to toggle outlier detection (currently: ON)");
                 Console.WriteLine("Press 'f' to flip/mirror camera");
                 
                 // Calculate center point once (frame dimensions don't change)
@@ -297,13 +307,25 @@ namespace ColorDetectionApp
                             !imageExported &&
                             (DateTime.Now - lastLightDetectedTime.Value).TotalSeconds >= noLightTimeout)
                         {
+                            // Apply outlier detection if enabled
+                            var pointsToExport = brightestPoints;
+                            if (outlierDetectionEnabled && brightestPoints.Count >= 4)
+                            {
+                                var originalCount = brightestPoints.Count;
+                                pointsToExport = OutlierDetection.RemoveOutliersHybrid(brightestPoints);
+                                if (pointsToExport.Count < originalCount)
+                                {
+                                    Console.WriteLine($"\nOutlier detection: Removed {originalCount - pointsToExport.Count} outlier(s) from {originalCount} points");
+                                }
+                            }
+                            
                             // Export the drawing to PNG and CSV
                             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                             string pngFilename = $"light_drawing_{timestamp}.png";
                             string csvFilename = $"light_drawing_{timestamp}.csv";
-                            ExportDrawingToPng(brightestPoints, (int)capture.FrameWidth, (int)capture.FrameHeight, pngFilename);
-                            ExportPointsToCsv(brightestPoints, csvFilename);
-                            Console.WriteLine($"\nNo light detected for {noLightTimeout}s - Drawing exported to: {pngFilename}");
+                            ExportDrawingToPng(pointsToExport, (int)capture.FrameWidth, (int)capture.FrameHeight, pngFilename);
+                            ExportPointsToCsv(pointsToExport, csvFilename);
+                            Console.WriteLine($"No light detected for {noLightTimeout}s - Drawing exported to: {pngFilename}");
                             Console.WriteLine($"Points data exported to: {csvFilename}");
                             
                             // Perform symbol detection on the exported image using enhanced detector
@@ -344,6 +366,10 @@ namespace ColorDetectionApp
                         if (calibratedColor.HasValue)
                         {
                             info += " [CALIBRATED]";
+                        }
+                        if (outlierDetectionEnabled)
+                        {
+                            info += " [OUTLIER FILTER: ON]";
                         }
                         Cv2.PutText(frame, info, new OpenCvSharp.Point(10, 30), 
                                    HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
@@ -423,6 +449,12 @@ namespace ColorDetectionApp
                             string filename = $"circular_screenshot_{timestamp}.png";
                             CaptureCircularScreenshot(frame, centerPoint, captureCircleRadius, filename);
                             Console.WriteLine($"Circular screenshot saved to: {filename}");
+                        }
+                        else if (key == 'x' || key == 'X')
+                        {
+                            // Toggle outlier detection
+                            outlierDetectionEnabled = !outlierDetectionEnabled;
+                            Console.WriteLine($"Outlier detection: {(outlierDetectionEnabled ? "ENABLED" : "DISABLED")}");
                         }
                         else if (key == 'f' || key == 'F')
                         {
