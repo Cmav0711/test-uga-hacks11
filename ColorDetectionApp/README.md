@@ -5,7 +5,12 @@ A C# console application that uses real-time camera tracking or image processing
 ## Features
 
 ### Real-time Camera Mode (New!)
-- **Color Selection at Startup**: Choose which color of light to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any bright light)
+- **Dual-Color Tracking Mode**: Choose TWO different colors to track simultaneously at startup
+  - **Primary Color**: Normal tracking with PNG + CSV export when switching colors
+  - **Secondary Color**: CSV-only export when switching back to primary
+  - Automatic color switching detection
+  - Different export behaviors based on active color
+- **Single-Color Selection** (backward compatible): Choose which color of light to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any bright light)
 - **HSV Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
 - **Live Color-Specific Tracking**: Automatically finds and tracks lights matching the selected color in each camera frame
 - **Automatic PNG and CSV Export**: When light is not detected for a configurable timeout (default: 3.0s), the drawn path is automatically saved as a PNG file and point data is exported to a CSV file
@@ -63,12 +68,22 @@ A C# console application that uses real-time camera tracking or image processing
 dotnet run
 ```
 
-When run without arguments, the application opens your default camera and tracks lights matching your selected color in real-time.
+When run without arguments, the application opens your default camera and prompts you to select TWO colors for dual-color tracking mode.
 
-**Startup Color Selection:**
+**Startup Dual-Color Selection:**
 
-When you start the application, you'll be prompted to choose which color of light to track:
-1. **Any bright light** - Tracks any bright light (original behavior, uses brightness only)
+When you start the application, you'll be prompted to choose TWO colors:
+
+1. **Primary Color** - This color will be tracked with normal behavior:
+   - When you switch to the secondary color, a PNG + CSV will be exported
+   - All tracked points with lines connecting them
+   
+2. **Secondary Color** - This color will be tracked with CSV-only export:
+   - When you switch back to the primary color, only a CSV will be exported
+   - No PNG image created
+
+**Available Colors:**
+1. **Any bright light** - Tracks any bright light (uses brightness only)
 2. **Red** - Tracks red lights using HSV color detection
 3. **Green** - Tracks green lights using HSV color detection
 4. **Blue** - Tracks blue lights using HSV color detection
@@ -77,7 +92,14 @@ When you start the application, you'll be prompted to choose which color of ligh
 7. **Magenta** - Tracks magenta lights using HSV color detection
 8. **White** - Tracks white lights using HSV color detection
 
-Simply enter the number (1-8) corresponding to your choice. The application will then only track lights of that color.
+Simply enter the number (1-8) for each color. If you select the same color for both, the application will fall back to single-color mode.
+
+**Dual-Color Tracking Behavior:**
+- The application automatically detects which color is present in each frame
+- When switching from **primary → secondary**: Exports PNG + CSV for primary color path
+- When switching from **secondary → primary**: Exports CSV only for secondary color points
+- Each color's points are tracked separately
+- Points are cleared after each export
 
 **Controls:**
 - **'q' or ESC**: Quit the application
@@ -94,11 +116,12 @@ Simply enter the number (1-8) corresponding to your choice. The application will
 - Historical brightest points: Smaller cyan dots forming a trail
 - Orange lines connecting consecutive points showing the movement path
 - Purple circle around last tracked point showing the tracking radius
-- Color information: RGB values of the current brightest point
+- Color information: RGB values of the current brightest point and active color being tracked
 - Color difference: When calibrated, shows how much the color has changed from baseline
-- Status text: "Points tracked: X | Tracking radius: Ypx | Timeout: Zs" showing total count, current radius, and no-light timeout, plus "[CALIBRATED]" status
-- Automatic PNG and CSV export: When light is not detected for the configured timeout, files are saved with format: `light_drawing_YYYYMMDD_HHMMSS.png` and `light_drawing_YYYYMMDD_HHMMSS.csv`
-- After export, all tracked points are automatically cleared to start fresh for the next drawing session
+- Status text: "Points: X | Radius: Ypx | Timeout: Zs | Active: [ColorName]" showing total count, current radius, no-light timeout, and currently active color, plus "[CAL]" when calibrated
+- Automatic export on color switch: Files are saved with format: `light_drawing_[ColorName]_YYYYMMDD_HHMMSS.png` and `light_drawing_[ColorName]_YYYYMMDD_HHMMSS.csv`
+- Automatic export on timeout: Files are saved with format: `light_drawing_[ColorName]_YYYYMMDD_HHMMSS_timeout.png/csv`
+- After export, tracked points for that color are automatically cleared to start fresh
 
 ### Static Image Mode
 

@@ -5,9 +5,13 @@
 A C# application using OpenCV and SixLabors.ImageSharp that detects bright lights in real-time from a camera feed or processes static images.
 
 ### Features
+- **Dual-Color Tracking Mode**: Choose two different colors to track with different export behaviors
+  - Primary color: Normal tracking with PNG + CSV export on color switch
+  - Secondary color: CSV-only export on switch back
 - **Color Selection**: Choose specific light colors to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any)
 - **Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
 - **Real-time Camera Tracking**: Tracks lights matching the selected color in each camera frame with calibration support
+- **Automatic Export on Color Switch**: Saves appropriate files when switching between colors
 - **Automatic PNG Export**: Saves a PNG image of the drawn path when light is not detected for a configurable timeout
 - **Circle-based Point Filtering**: Only tracks points within a configurable radius of the last tracked point, filtering out erratic movements
 - **Adjustable Tracking Radius**: Change the tracking circle size using '+' and '-' keys (default: 100px, range: 10-500px)
@@ -28,7 +32,11 @@ cd ColorDetectionApp
 dotnet run
 ```
 
-At startup, you'll be prompted to select which color of light to track:
+At startup, you'll be prompted to select TWO colors for dual-color tracking:
+1. **PRIMARY color** - First selection for normal tracking (PNG + CSV export on switch)
+2. **SECONDARY color** - Second selection for CSV-only tracking
+
+**Available colors:**
 - **1. Any bright light** - Tracks any bright light (original behavior)
 - **2. Red** - Tracks red lights only
 - **3. Green** - Tracks green lights only
@@ -38,12 +46,14 @@ At startup, you'll be prompted to select which color of light to track:
 - **7. Magenta** - Tracks magenta lights only
 - **8. White** - Tracks white lights only
 
-After selecting a color, the application will track lights matching that color in real-time:
-- The current brightest point is shown as a large green circle (if within tracking radius) or red circle (if filtered out)
+After selecting both colors, the application will track lights and detect color switches:
+- When switching from **primary to secondary**: Exports PNG + CSV
+- When switching from **secondary to primary**: Exports CSV only
+- The current brightest point is shown as a large green circle (if within tracking radius)
 - All previously tracked points are shown as smaller cyan dots
 - Orange lines connect consecutive points to show the path
 - A purple circle shows the tracking radius around the last tracked point
-- RGB color values are displayed on screen
+- RGB color values and active color are displayed on screen
 - Press 'b' to calibrate and capture baseline color for comparison
 - Press '+' to increase tracking radius, '-' to decrease (default: 100px)
 - Press '[' to decrease no-light timeout, ']' to increase (default: 3.0s)
