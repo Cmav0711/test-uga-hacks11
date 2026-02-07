@@ -7,6 +7,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using OpenCvSharp;
 
 namespace ColorDetectionApp
 {
@@ -19,10 +20,10 @@ namespace ColorDetectionApp
 
             if (args.Length == 0)
             {
-                Console.WriteLine("Usage: ColorDetectionApp <image_path>");
-                Console.WriteLine("\nGenerating a sample image for demonstration...");
-                GenerateSampleImage("sample_input.png");
-                args = new string[] { "sample_input.png" };
+                Console.WriteLine("Starting real-time camera tracking...");
+                Console.WriteLine("Press 'q' to quit, 'c' to clear tracked points\n");
+                RunCameraTracking();
+                return;
             }
 
             string imagePath = args[0];
@@ -34,6 +35,109 @@ namespace ColorDetectionApp
             }
 
             ProcessImage(imagePath);
+        }
+
+        static void RunCameraTracking()
+        {
+            // List to store all brightest points from previous frames
+            var brighestPoints = new List<OpenCvSharp.Point>();
+            
+            // Open the default camera
+            using (var capture = new VideoCapture(0))
+            {
+                if (!capture.IsOpened())
+                {
+                    Console.WriteLine("Error: Could not open camera. Make sure a camera is connected.");
+                    return;
+                }
+
+                // Set camera properties for better performance
+                capture.Set(VideoCaptureProperties.FrameWidth, 640);
+                capture.Set(VideoCaptureProperties.FrameHeight, 480);
+
+                Console.WriteLine($"Camera opened successfully!");
+                Console.WriteLine($"Resolution: {capture.FrameWidth}x{capture.FrameHeight}");
+
+                using (var frame = new Mat())
+                using (var window = new Window("Brightest Point Tracker - Press 'q' to quit, 'c' to clear"))
+                {
+                    while (true)
+                    {
+                        // Capture frame from camera
+                        capture.Read(frame);
+                        
+                        if (frame.Empty())
+                        {
+                            Console.WriteLine("Warning: Empty frame captured");
+                            break;
+                        }
+
+                        // Find the brightest point in this frame
+                        var brightestPoint = FindBrightestPoint(frame);
+                        
+                        if (brightestPoint.HasValue)
+                        {
+                            // Add to our collection
+                            brighestPoints.Add(brightestPoint.Value);
+                            
+                            // Draw the current brightest point (large, bright green)
+                            Cv2.Circle(frame, brightestPoint.Value, 8, new Scalar(0, 255, 0), -1);
+                            Cv2.Circle(frame, brightestPoint.Value, 10, new Scalar(0, 255, 0), 2);
+                        }
+
+                        // Draw all historical points (smaller, cyan)
+                        foreach (var point in brighestPoints)
+                        {
+                            Cv2.Circle(frame, point, 3, new Scalar(255, 255, 0), -1);
+                        }
+
+                        // Display frame count and point count
+                        string info = $"Points tracked: {brighestPoints.Count}";
+                        Cv2.PutText(frame, info, new OpenCvSharp.Point(10, 30), 
+                                   HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
+
+                        // Show the frame
+                        window.ShowImage(frame);
+
+                        // Check for key press
+                        int key = Cv2.WaitKey(1);
+                        if (key == 'q' || key == 'Q' || key == 27) // 'q' or ESC
+                        {
+                            break;
+                        }
+                        else if (key == 'c' || key == 'C')
+                        {
+                            brighestPoints.Clear();
+                            Console.WriteLine("Cleared all tracked points");
+                        }
+                    }
+                }
+
+                Console.WriteLine($"\nTotal points tracked: {brighestPoints.Count}");
+                Console.WriteLine("Camera tracking stopped.");
+            }
+        }
+
+        static OpenCvSharp.Point? FindBrightestPoint(Mat frame)
+        {
+            // Convert to grayscale for easier brightness analysis
+            using (var gray = new Mat())
+            {
+                Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
+                
+                // Find the location of the maximum brightness
+                double minVal, maxVal;
+                OpenCvSharp.Point minLoc, maxLoc;
+                Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc);
+                
+                // Only return if brightness is above threshold (to avoid noise in dark scenes)
+                if (maxVal >= 200)
+                {
+                    return maxLoc;
+                }
+            }
+            
+            return null;
         }
 
         static void GenerateSampleImage(string outputPath)
