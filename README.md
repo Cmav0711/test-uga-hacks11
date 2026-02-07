@@ -8,6 +8,10 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
 - **Dual-Color Tracking Mode**: Choose two different colors to track with different export behaviors
   - Primary color: Normal tracking with PNG + CSV export on color switch
   - Secondary color: CSV-only export on switch back
+- **Circular Screenshot Capture**: Define a circular region in the center of the screen and capture only that area as a screenshot
+  - Adjustable circle size using 'o' and 'i' keys (default: 150px, range: 20-500px)
+  - Visual indicator showing the capture region
+  - Press 's' to capture a circular screenshot
 - **Color Selection**: Choose specific light colors to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any)
 - **Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
 - **Real-time Camera Tracking**: Tracks lights matching the selected color in each camera frame with calibration support
@@ -53,10 +57,13 @@ After selecting both colors, the application will track lights and detect color 
 - All previously tracked points are shown as smaller cyan dots
 - Orange lines connect consecutive points to show the path
 - A purple circle shows the tracking radius around the last tracked point
+- A cyan circle in the center shows the circular screenshot capture region
 - RGB color values and active color are displayed on screen
 - Press 'b' to calibrate and capture baseline color for comparison
 - Press '+' to increase tracking radius, '-' to decrease (default: 100px)
 - Press '[' to decrease no-light timeout, ']' to increase (default: 3.0s)
+- Press 'o' to increase capture circle size, 'i' to decrease (default: 150px)
+- Press 's' to take a circular screenshot of the capture region
 - Press 'q' to quit
 - Press 'c' to clear the tracked points
 - When light is not detected for the configured timeout, a PNG image is automatically saved
