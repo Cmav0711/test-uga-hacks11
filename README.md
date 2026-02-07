@@ -139,8 +139,8 @@ dotnet run --interactive-contour path/to/image.png
 
 ### Documentation
 
-- **[ColorDetectionApp/CONTOUR_APPROXIMATION.md](ColorDetectionApp/CONTOUR_APPROXIMATION.md)** - ⭐ **Complete guide to contour approximation feature** (recommended for shape analysis)
 - **[ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md)** - ⭐ **Comprehensive guide to enhanced shape detection** (recommended read)
+- **[ColorDetectionApp/CONTOUR_APPROXIMATION.md](ColorDetectionApp/CONTOUR_APPROXIMATION.md)** - ⭐ **Complete guide to contour approximation feature** (recommended for advanced shape analysis)
 - **[SHAPE_DETECTION_MODEL_RESEARCH.md](SHAPE_DETECTION_MODEL_RESEARCH.md)** - Research on various shape detection models and recommendations
 - **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Step-by-step implementation guide for ML models (optional advanced usage)
 - [ColorDetectionApp/README.md](ColorDetectionApp/README.md) - Detailed usage instructions and technical documentation
