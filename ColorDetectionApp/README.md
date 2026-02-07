@@ -42,6 +42,7 @@ A C# console application that uses real-time camera tracking or image processing
   - Press 'o' to increase capture circle size by 10px
   - Press 'i' to decrease capture circle size by 10px
   - Press 's' to take a circular screenshot
+  - Press 'f' to flip/mirror the camera display
 - **Real-time Overlay**: Shows current camera feed with overlaid tracking information
 - **Frame Statistics**: Displays count of tracked points, tracking radius, no-light timeout, capture circle radius, and calibration status
 
