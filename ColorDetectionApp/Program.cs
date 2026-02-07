@@ -45,6 +45,9 @@ namespace ColorDetectionApp
             // Calibration data - stores baseline color for comparison
             Scalar? calibratedColor = null;
             
+            // Tracking radius for filtering points (adjustable via +/- keys)
+            int trackingRadius = 100;
+            
             // Open the default camera
             using (var capture = new VideoCapture(0))
             {
@@ -61,9 +64,10 @@ namespace ColorDetectionApp
                 Console.WriteLine($"Camera opened successfully!");
                 Console.WriteLine($"Resolution: {capture.FrameWidth}x{capture.FrameHeight}");
                 Console.WriteLine("Press 'b' to calibrate with brightest point color");
+                Console.WriteLine("Press '+' to increase tracking radius, '-' to decrease");
 
                 using (var frame = new Mat())
-                using (var window = new Window("Brightest Point Tracker - Press 'q' to quit, 'c' to clear, 'b' to calibrate"))
+                using (var window = new Window("Brightest Point Tracker - Press 'q' to quit, 'c' to clear, 'b' to calibrate, '+/-' for radius"))
                 {
                     while (true)
                     {
@@ -81,15 +85,28 @@ namespace ColorDetectionApp
                         
                         if (brightestPoint.HasValue)
                         {
-                            // Add to our collection
-                            brightestPoints.Add(brightestPoint.Value);
+                            // Check if the point is within tracking radius of the last point
+                            bool shouldAdd = true;
+                            if (brightestPoints.Count > 0)
+                            {
+                                var lastPoint = brightestPoints[brightestPoints.Count - 1];
+                                double distance = CalculateDistance(lastPoint, brightestPoint.Value);
+                                shouldAdd = distance <= trackingRadius;
+                            }
+                            
+                            if (shouldAdd)
+                            {
+                                // Add to our collection
+                                brightestPoints.Add(brightestPoint.Value);
+                            }
                             
                             // Get the color at the brightest point
                             var color = GetColorAtPoint(frame, brightestPoint.Value);
                             
-                            // Draw the current brightest point (large, bright green)
-                            Cv2.Circle(frame, brightestPoint.Value, 8, new Scalar(0, 255, 0), -1);
-                            Cv2.Circle(frame, brightestPoint.Value, 10, new Scalar(0, 255, 0), 2);
+                            // Draw the current brightest point (large, bright green if valid, red if filtered out)
+                            var pointColor = shouldAdd ? new Scalar(0, 255, 0) : new Scalar(0, 0, 255);
+                            Cv2.Circle(frame, brightestPoint.Value, 8, pointColor, -1);
+                            Cv2.Circle(frame, brightestPoint.Value, 10, pointColor, 2);
                             
                             // Display color information
                             string colorInfo = $"Color: B={color.Val0:F0} G={color.Val1:F0} R={color.Val2:F0}";
@@ -118,9 +135,16 @@ namespace ColorDetectionApp
                         {
                             Cv2.Circle(frame, point, 3, new Scalar(255, 255, 0), -1);
                         }
+                        
+                        // Draw tracking radius circle around the last tracked point
+                        if (brightestPoints.Count > 0)
+                        {
+                            var lastPoint = brightestPoints[brightestPoints.Count - 1];
+                            Cv2.Circle(frame, lastPoint, trackingRadius, new Scalar(255, 0, 255), 2);
+                        }
 
                         // Display frame count and point count
-                        string info = $"Points tracked: {brightestPoints.Count}";
+                        string info = $"Points tracked: {brightestPoints.Count} | Tracking radius: {trackingRadius}px";
                         if (calibratedColor.HasValue)
                         {
                             info += " [CALIBRATED]";
@@ -154,6 +178,18 @@ namespace ColorDetectionApp
                             {
                                 Console.WriteLine("No bright point found for calibration");
                             }
+                        }
+                        else if (key == '+' || key == '=')
+                        {
+                            trackingRadius += 10;
+                            if (trackingRadius > 500) trackingRadius = 500;
+                            Console.WriteLine($"Tracking radius increased to {trackingRadius}px");
+                        }
+                        else if (key == '-' || key == '_')
+                        {
+                            trackingRadius -= 10;
+                            if (trackingRadius < 10) trackingRadius = 10;
+                            Console.WriteLine($"Tracking radius decreased to {trackingRadius}px");
                         }
                     }
                 }
@@ -207,6 +243,14 @@ namespace ColorDetectionApp
             double gDiff = color1.Val1 - color2.Val1;
             double rDiff = color1.Val2 - color2.Val2;
             return Math.Sqrt(bDiff * bDiff + gDiff * gDiff + rDiff * rDiff);
+        }
+
+        static double CalculateDistance(OpenCvSharp.Point p1, OpenCvSharp.Point p2)
+        {
+            // Calculate Euclidean distance between two points
+            double dx = p1.X - p2.X;
+            double dy = p1.Y - p2.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
         }
 
         static void GenerateSampleImage(string outputPath)
