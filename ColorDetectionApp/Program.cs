@@ -104,6 +104,9 @@ namespace ColorDetectionApp
             DateTime? lastLightDetectedTime = null;
             bool imageExported = false;
             
+            // Circular screenshot capture region (adjustable via 'O' and 'I' keys)
+            int captureCircleRadius = 150;
+            
             // Open the default camera
             using (var capture = new VideoCapture(0))
             {
@@ -123,9 +126,14 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press 'b' to calibrate with brightest point color");
                 Console.WriteLine("Press '+' to increase tracking radius, '-' to decrease");
                 Console.WriteLine("Press '[' to decrease no-light timeout, ']' to increase");
+                Console.WriteLine("Press 'o' to increase capture circle size, 'i' to decrease");
+                Console.WriteLine("Press 's' to take circular screenshot");
+                
+                // Calculate center point once (frame dimensions don't change)
+                var centerPoint = new OpenCvSharp.Point((int)capture.FrameWidth / 2, (int)capture.FrameHeight / 2);
 
                 using (var frame = new Mat())
-                using (var window = new Window($"Brightest Point Tracker ({targetColor}) - Press 'q' to quit, 'c' to clear, 'b' to calibrate, '+/-' for radius, '[/]' for timeout"))
+                using (var window = new Window($"Brightest Point Tracker ({targetColor}) - 'q' quit, 'c' clear, 's' circular screenshot, 'o/i' capture size"))
                 {
                     while (true)
                     {
@@ -217,6 +225,9 @@ namespace ColorDetectionApp
                             var lastPoint = brightestPoints[brightestPoints.Count - 1];
                             Cv2.Circle(frame, lastPoint, trackingRadius, new Scalar(255, 0, 255), 2);
                         }
+                        
+                        // Draw circular screenshot capture region in the center of the screen
+                        Cv2.Circle(frame, centerPoint, captureCircleRadius, new Scalar(0, 255, 255), 3); // Cyan circle
 
                         // Display frame count and point count
                         string info = $"Points tracked: {brightestPoints.Count} | Tracking radius: {trackingRadius}px | Timeout: {noLightTimeout:F1}s";
@@ -226,6 +237,11 @@ namespace ColorDetectionApp
                         }
                         Cv2.PutText(frame, info, new OpenCvSharp.Point(10, 30), 
                                    HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
+                        
+                        // Display capture circle radius
+                        string captureInfo = $"Capture Circle Radius: {captureCircleRadius}px (press 's' to screenshot)";
+                        Cv2.PutText(frame, captureInfo, new OpenCvSharp.Point(10, frame.Height - 20), 
+                                   HersheyFonts.HersheySimplex, 0.6, new Scalar(0, 255, 255), 2);
 
                         // Show the frame
                         window.ShowImage(frame);
@@ -277,6 +293,26 @@ namespace ColorDetectionApp
                             noLightTimeout += 0.5;
                             if (noLightTimeout > 30.0) noLightTimeout = 30.0;
                             Console.WriteLine($"No-light timeout increased to {noLightTimeout:F1}s");
+                        }
+                        else if (key == 'o' || key == 'O')
+                        {
+                            captureCircleRadius += 10;
+                            if (captureCircleRadius > 500) captureCircleRadius = 500;
+                            Console.WriteLine($"Capture circle radius increased to {captureCircleRadius}px");
+                        }
+                        else if (key == 'i' || key == 'I')
+                        {
+                            captureCircleRadius -= 10;
+                            if (captureCircleRadius < 20) captureCircleRadius = 20;
+                            Console.WriteLine($"Capture circle radius decreased to {captureCircleRadius}px");
+                        }
+                        else if (key == 's' || key == 'S')
+                        {
+                            // Capture circular screenshot
+                            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                            string filename = $"circular_screenshot_{timestamp}.png";
+                            CaptureCircularScreenshot(frame, centerPoint, captureCircleRadius, filename);
+                            Console.WriteLine($"Circular screenshot saved to: {filename}");
                         }
                     }
                 }
@@ -510,6 +546,55 @@ namespace ColorDetectionApp
                 for (int i = 0; i < points.Count; i++)
                 {
                     writer.WriteLine($"{i},{points[i].X},{points[i].Y}");
+                }
+            }
+        }
+
+        static void CaptureCircularScreenshot(Mat frame, OpenCvSharp.Point center, int radius, string filename)
+        {
+            // Calculate the bounding box for the circular region
+            int x = Math.Max(0, center.X - radius);
+            int y = Math.Max(0, center.Y - radius);
+            int width = Math.Min(frame.Width - x, radius * 2);
+            int height = Math.Min(frame.Height - y, radius * 2);
+            
+            // Extract the region of interest
+            var roi = new Rect(x, y, width, height);
+            using (var croppedFrame = new Mat(frame, roi))
+            {
+                // Convert OpenCV Mat to ImageSharp Image
+                var bytes = croppedFrame.ToBytes(".png");
+                using (var image = Image.Load<Rgba32>(bytes))
+                {
+                    // Create a mask for the circular region
+                    // Calculate the center of the cropped image relative to the original circle center
+                    int circleCenterX = center.X - x;
+                    int circleCenterY = center.Y - y;
+                    
+                    // Apply circular mask - make pixels outside the circle transparent
+                    image.ProcessPixelRows(accessor =>
+                    {
+                        for (int py = 0; py < accessor.Height; py++)
+                        {
+                            var pixelRow = accessor.GetRowSpan(py);
+                            for (int px = 0; px < pixelRow.Length; px++)
+                            {
+                                // Calculate distance from the circle center
+                                int dx = px - circleCenterX;
+                                int dy = py - circleCenterY;
+                                double distance = Math.Sqrt(dx * dx + dy * dy);
+                                
+                                // If outside the circle, make pixel transparent
+                                if (distance > radius)
+                                {
+                                    pixelRow[px] = new Rgba32(0, 0, 0, 0);
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Save the circular screenshot
+                    image.Save(filename);
                 }
             }
         }

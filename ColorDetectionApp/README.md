@@ -8,6 +8,11 @@ A C# console application that uses real-time camera tracking or image processing
 - **Color Selection at Startup**: Choose which color of light to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any bright light)
 - **HSV Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
 - **Live Color-Specific Tracking**: Automatically finds and tracks lights matching the selected color in each camera frame
+- **Circular Screenshot Capture**: Define a circular region in the center of the screen and capture only that area
+  - Visual indicator showing the capture region with a cyan circle overlay
+  - Adjustable circle size using 'o' and 'i' keys (20-500px, default: 150px)
+  - Press 's' to capture a circular screenshot that only includes the area within the circle
+  - Areas outside the circle are made transparent in the saved image
 - **Automatic PNG Export**: When light is not detected for a configurable timeout (default: 3.0s), the drawn path is automatically saved as a PNG file
 - **Adjustable No-Light Timeout**: Use '[' and ']' keys to change the timeout for automatic PNG export (0.5-30.0s, default: 3.0s)
 - **Circle-based Filtering**: Only accepts points within a configurable radius of the last tracked point, preventing erratic jumps
@@ -26,8 +31,11 @@ A C# console application that uses real-time camera tracking or image processing
   - Press '-' to decrease tracking radius by 10px
   - Press ']' to increase no-light timeout by 0.5s
   - Press '[' to decrease no-light timeout by 0.5s
+  - Press 'o' to increase capture circle size by 10px
+  - Press 'i' to decrease capture circle size by 10px
+  - Press 's' to take a circular screenshot
 - **Real-time Overlay**: Shows current camera feed with overlaid tracking information
-- **Frame Statistics**: Displays count of tracked points, tracking radius, no-light timeout, and calibration status
+- **Frame Statistics**: Displays count of tracked points, tracking radius, no-light timeout, capture circle radius, and calibration status
 
 ### Static Image Mode
 - **Bright Light Detection**: Automatically identifies bright light sources in images
