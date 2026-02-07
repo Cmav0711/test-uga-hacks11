@@ -70,6 +70,7 @@ After selecting both colors, the application will track lights and detect color 
 - Press '[' to decrease no-light timeout, ']' to increase (default: 3.0s)
 - Press 'o' to increase capture circle size, 'i' to decrease (default: 150px)
 - Press 's' to take a circular screenshot of the capture region
+- Press 'f' to flip/mirror the camera display
 - Press 'q' to quit
 - Press 'c' to clear the tracked points
 - When light is not detected for the configured timeout, a PNG image is automatically saved

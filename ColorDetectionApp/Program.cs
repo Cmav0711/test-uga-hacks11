@@ -121,6 +121,9 @@ namespace ColorDetectionApp
             // Circular screenshot capture region (adjustable via 'O' and 'I' keys)
             int captureCircleRadius = 150;
             
+            // Camera flip state (adjustable via 'f' key)
+            bool flipCamera = false;
+            
             // Open the default camera
             using (var capture = new VideoCapture(0))
             {
@@ -142,12 +145,13 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press '[' to decrease no-light timeout, ']' to increase");
                 Console.WriteLine("Press 'o' to increase capture circle size, 'i' to decrease");
                 Console.WriteLine("Press 's' to take circular screenshot");
+                Console.WriteLine("Press 'f' to flip/mirror camera");
                 
                 // Calculate center point once (frame dimensions don't change)
                 var centerPoint = new OpenCvSharp.Point((int)capture.FrameWidth / 2, (int)capture.FrameHeight / 2);
 
                 using (var frame = new Mat())
-                using (var window = new Window($"Brightest Point Tracker ({targetColor}) - 'q' quit, 'c' clear, 's' circular screenshot, 'o/i' capture size"))
+                using (var window = new Window($"Brightest Point Tracker ({targetColor}) - 'q' quit, 'c' clear, 's' screenshot, 'f' flip"))
                 {
                     while (true)
                     {
@@ -158,6 +162,12 @@ namespace ColorDetectionApp
                         {
                             Console.WriteLine("Warning: Empty frame captured");
                             break;
+                        }
+
+                        // Flip the frame horizontally if flip mode is enabled
+                        if (flipCamera)
+                        {
+                            Cv2.Flip(frame, frame, OpenCvSharp.FlipMode.Y); // FlipMode.Y flips horizontally (mirror effect)
                         }
 
                         // Find the brightest point in this frame
@@ -331,6 +341,12 @@ namespace ColorDetectionApp
                             string filename = $"circular_screenshot_{timestamp}.png";
                             CaptureCircularScreenshot(frame, centerPoint, captureCircleRadius, filename);
                             Console.WriteLine($"Circular screenshot saved to: {filename}");
+                        }
+                        else if (key == 'f' || key == 'F')
+                        {
+                            // Toggle camera flip/mirror
+                            flipCamera = !flipCamera;
+                            Console.WriteLine($"Camera flip {(flipCamera ? "enabled" : "disabled")} - image is {(flipCamera ? "mirrored" : "normal")}");
                         }
                     }
                 }
