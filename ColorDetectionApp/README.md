@@ -5,7 +5,9 @@ A C# console application that uses real-time camera tracking or image processing
 ## Features
 
 ### Real-time Camera Mode (New!)
-- **Live Brightest Point Tracking**: Automatically finds and tracks the single brightest point in each camera frame
+- **Color Selection at Startup**: Choose which color of light to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any bright light)
+- **HSV Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
+- **Live Color-Specific Tracking**: Automatically finds and tracks lights matching the selected color in each camera frame
 - **Automatic PNG Export**: When light is not detected for a configurable timeout (default: 3.0s), the drawn path is automatically saved as a PNG file
 - **Adjustable No-Light Timeout**: Use '[' and ']' keys to change the timeout for automatic PNG export (0.5-30.0s, default: 3.0s)
 - **Circle-based Filtering**: Only accepts points within a configurable radius of the last tracked point, preventing erratic jumps
@@ -61,7 +63,21 @@ A C# console application that uses real-time camera tracking or image processing
 dotnet run
 ```
 
-When run without arguments, the application opens your default camera and tracks the brightest point in real-time.
+When run without arguments, the application opens your default camera and tracks lights matching your selected color in real-time.
+
+**Startup Color Selection:**
+
+When you start the application, you'll be prompted to choose which color of light to track:
+1. **Any bright light** - Tracks any bright light (original behavior, uses brightness only)
+2. **Red** - Tracks red lights using HSV color detection
+3. **Green** - Tracks green lights using HSV color detection
+4. **Blue** - Tracks blue lights using HSV color detection
+5. **Yellow** - Tracks yellow lights using HSV color detection
+6. **Cyan** - Tracks cyan lights using HSV color detection
+7. **Magenta** - Tracks magenta lights using HSV color detection
+8. **White** - Tracks white lights using HSV color detection
+
+Simply enter the number (1-8) corresponding to your choice. The application will then only track lights of that color.
 
 **Controls:**
 - **'q' or ESC**: Quit the application
@@ -97,12 +113,27 @@ Processes a static image file and generates output images with detected bright r
 Bright Light Color Detection and Mapping
 ========================================
 
-Starting real-time camera tracking...
+Select the color of light to track:
+1. Any bright light (default)
+2. Red
+3. Green
+4. Blue
+5. Yellow
+6. Cyan
+7. Magenta
+8. White
+
+Enter your choice (1-8): 3
+
+Starting real-time camera tracking for Green light...
 Press 'q' to quit, 'c' to clear tracked points
 
 Camera opened successfully!
 Resolution: 640x480
+Tracking color: Green
 Press 'b' to calibrate with brightest point color
+Press '+' to increase tracking radius, '-' to decrease
+Press '[' to decrease no-light timeout, ']' to increase
 
 [Real-time window displays with overlaid points and connecting lines]
 
@@ -180,13 +211,15 @@ dotnet run [image_path]
 ## Use Cases
 
 ### Real-time Camera Mode
+- **Color-specific light tracking** - Track specific colored lights (red, green, blue, etc.) in multi-colored environments
+- **RGB LED tracking** - Track individual colors from RGB light sources
+- **Colored laser pointer tracking** - Follow colored laser pointers with accuracy
+- **Stage lighting analysis** - Track specific colored stage lights separately
 - Tracking light sources in motion with color change detection
 - Calibrating baseline light color for comparison
 - Detecting when light passes through colored objects or filters
 - Interactive light painting applications with automatic capture
 - Light drawing/painting - automatically saves your artwork when you turn off the light
-- Laser pointer tracking with path visualization and automatic export
-- Stage light position mapping during performances
 - Real-time quality control for lighting installations
 - Interactive installations and art projects
 - Educational demonstrations of light tracking and color analysis
@@ -205,22 +238,29 @@ dotnet run [image_path]
 
 The real-time tracking works in a simple, efficient manner:
 
-1. **Frame Capture**: Captures frames from the camera at the camera's native framerate
-2. **Grayscale Conversion**: Converts the color frame to grayscale for efficient brightness analysis
-3. **Brightest Point Detection**: Uses OpenCV's MinMaxLoc to find the pixel with maximum brightness
-4. **Distance-based Filtering**: Calculates the distance from the last tracked point to the current brightest point. Only accepts the point if it's within the configured tracking radius (default: 100px)
-5. **Color Extraction**: Captures the BGR color values at the brightest point location
-6. **Calibration Support**: Press 'b' to store the current color as a baseline reference
-7. **Color Difference Calculation**: When calibrated, calculates Euclidean distance in BGR color space between current and baseline colors
-8. **Threshold Filtering**: Only tracks points with brightness >= 200 (0-255 scale) to avoid noise
-9. **Accumulation**: Stores all brightest points that pass the distance filter from each frame in a list
-10. **Path Visualization**: 
+1. **Color Selection**: User selects which color of light to track at startup (or "Any" for original brightness-based behavior)
+2. **Frame Capture**: Captures frames from the camera at the camera's native framerate
+3. **Color-Based Detection** (when specific color selected):
+   - Converts frame to HSV color space for better color discrimination
+   - Creates a color mask using predefined HSV ranges for the selected color
+   - Combines color mask with brightness threshold (>= 200) for accurate detection
+   - Only lights matching both color and brightness criteria are detected
+4. **Brightness-Based Detection** (when "Any" selected):
+   - Converts the color frame to grayscale for efficient brightness analysis
+   - Uses OpenCV's MinMaxLoc to find the pixel with maximum brightness
+5. **Distance-based Filtering**: Calculates the distance from the last tracked point to the current brightest point. Only accepts the point if it's within the configured tracking radius (default: 100px)
+6. **Color Extraction**: Captures the BGR color values at the brightest point location
+7. **Calibration Support**: Press 'b' to store the current color as a baseline reference
+8. **Color Difference Calculation**: When calibrated, calculates Euclidean distance in BGR color space between current and baseline colors
+9. **Threshold Filtering**: Only tracks points with brightness >= 200 (0-255 scale) to avoid noise
+10. **Accumulation**: Stores all brightest points that pass the distance filter from each frame in a list
+11. **Path Visualization**: 
    - Current brightest point: Large green filled circle (8px radius) with outline (10px radius) if within tracking radius, or red if filtered out
    - Historical points: Small cyan filled circles (3px radius)
    - Connecting lines: Orange lines (2px width) between consecutive points
    - Tracking circle: Purple circle (2px width) with radius equal to tracking radius around the last tracked point
    - Text overlays: Shows RGB color values, color difference (if calibrated), total count of tracked points, current tracking radius, and no-light timeout
-11. **No-Light Detection & PNG Export**:
+12. **No-Light Detection & PNG Export**:
    - Tracks the time when light was last detected
    - If no bright point is detected for the configured timeout duration (default: 3.0s), automatically exports the tracked path to a PNG file
    - Exported image shows the complete drawing with yellow connecting lines and cyan point markers on a black background

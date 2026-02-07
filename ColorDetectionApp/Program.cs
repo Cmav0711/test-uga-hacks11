@@ -11,6 +11,19 @@ using OpenCvSharp;
 
 namespace ColorDetectionApp
 {
+    // Enum for predefined color options
+    enum LightColor
+    {
+        Any,      // Any bright light (original behavior)
+        Red,
+        Green,
+        Blue,
+        Yellow,
+        Cyan,
+        Magenta,
+        White
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -20,9 +33,12 @@ namespace ColorDetectionApp
 
             if (args.Length == 0)
             {
-                Console.WriteLine("Starting real-time camera tracking...");
+                // Prompt user to select target light color
+                LightColor selectedColor = PromptForColorSelection();
+                
+                Console.WriteLine($"\nStarting real-time camera tracking for {selectedColor} light...");
                 Console.WriteLine("Press 'q' to quit, 'c' to clear tracked points\n");
-                RunCameraTracking();
+                RunCameraTracking(selectedColor);
                 return;
             }
 
@@ -37,7 +53,40 @@ namespace ColorDetectionApp
             ProcessImage(imagePath);
         }
 
-        static void RunCameraTracking()
+        static LightColor PromptForColorSelection()
+        {
+            Console.WriteLine("Select the color of light to track:");
+            Console.WriteLine("1. Any bright light (default)");
+            Console.WriteLine("2. Red");
+            Console.WriteLine("3. Green");
+            Console.WriteLine("4. Blue");
+            Console.WriteLine("5. Yellow");
+            Console.WriteLine("6. Cyan");
+            Console.WriteLine("7. Magenta");
+            Console.WriteLine("8. White");
+            Console.Write("\nEnter your choice (1-8): ");
+            
+            string? input = Console.ReadLine();
+            
+            if (string.IsNullOrWhiteSpace(input) || input == "1")
+            {
+                return LightColor.Any;
+            }
+            
+            return input switch
+            {
+                "2" => LightColor.Red,
+                "3" => LightColor.Green,
+                "4" => LightColor.Blue,
+                "5" => LightColor.Yellow,
+                "6" => LightColor.Cyan,
+                "7" => LightColor.Magenta,
+                "8" => LightColor.White,
+                _ => LightColor.Any
+            };
+        }
+
+        static void RunCameraTracking(LightColor targetColor = LightColor.Any)
         {
             // List to store all brightest points from previous frames
             var brightestPoints = new List<OpenCvSharp.Point>();
@@ -70,12 +119,13 @@ namespace ColorDetectionApp
 
                 Console.WriteLine($"Camera opened successfully!");
                 Console.WriteLine($"Resolution: {capture.FrameWidth}x{capture.FrameHeight}");
+                Console.WriteLine($"Tracking color: {targetColor}");
                 Console.WriteLine("Press 'b' to calibrate with brightest point color");
                 Console.WriteLine("Press '+' to increase tracking radius, '-' to decrease");
                 Console.WriteLine("Press '[' to decrease no-light timeout, ']' to increase");
 
                 using (var frame = new Mat())
-                using (var window = new Window("Brightest Point Tracker - Press 'q' to quit, 'c' to clear, 'b' to calibrate, '+/-' for radius, '[/]' for timeout"))
+                using (var window = new Window($"Brightest Point Tracker ({targetColor}) - Press 'q' to quit, 'c' to clear, 'b' to calibrate, '+/-' for radius, '[/]' for timeout"))
                 {
                     while (true)
                     {
@@ -93,7 +143,7 @@ namespace ColorDetectionApp
                         var searchCenter = brightestPoints.Count > 0 
                             ? brightestPoints[brightestPoints.Count - 1] 
                             : (OpenCvSharp.Point?)null;
-                        var brightestPoint = FindBrightestPoint(frame, searchCenter, trackingRadius);
+                        var brightestPoint = FindBrightestPointWithColor(frame, targetColor, searchCenter, trackingRadius);
                         
                         if (brightestPoint.HasValue)
                         {
@@ -265,6 +315,111 @@ namespace ColorDetectionApp
             }
             
             return null;
+        }
+
+        static OpenCvSharp.Point? FindBrightestPointWithColor(Mat frame, LightColor targetColor, OpenCvSharp.Point? circleCenter = null, int circleRadius = 0)
+        {
+            // If tracking any color, use the original brightness-based method
+            if (targetColor == LightColor.Any)
+            {
+                return FindBrightestPoint(frame, circleCenter, circleRadius);
+            }
+
+            // Convert frame to HSV for better color detection
+            using (var hsvFrame = new Mat())
+            {
+                Cv2.CvtColor(frame, hsvFrame, ColorConversionCodes.BGR2HSV);
+                
+                Mat colorMask;
+                
+                // Special handling for red since it wraps around in HSV space
+                if (targetColor == LightColor.Red)
+                {
+                    // Red is at both ends of the hue spectrum (0-10 and 170-180)
+                    using (var lowerRedMask = new Mat())
+                    using (var upperRedMask = new Mat())
+                    {
+                        Cv2.InRange(hsvFrame, new Scalar(0, 70, 100), new Scalar(10, 255, 255), lowerRedMask);
+                        Cv2.InRange(hsvFrame, new Scalar(170, 70, 100), new Scalar(180, 255, 255), upperRedMask);
+                        colorMask = new Mat();
+                        Cv2.BitwiseOr(lowerRedMask, upperRedMask, colorMask);
+                    }
+                }
+                else
+                {
+                    // Define color ranges in HSV space
+                    var (lowerBound, upperBound) = GetColorRange(targetColor);
+                    
+                    // Create mask for the target color
+                    colorMask = new Mat();
+                    Cv2.InRange(hsvFrame, lowerBound, upperBound, colorMask);
+                }
+                
+                try
+                {
+                    // Apply brightness threshold to the color mask
+                    using (var gray = new Mat())
+                    {
+                        Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
+                        using (var brightMask = new Mat())
+                        {
+                            // Create mask for bright pixels (>= 200)
+                            Cv2.Threshold(gray, brightMask, 200, 255, ThresholdTypes.Binary);
+                            
+                            // Combine color and brightness masks
+                            using (var combinedMask = new Mat())
+                            {
+                                Cv2.BitwiseAnd(colorMask, brightMask, combinedMask);
+                                
+                                // If we have a circle center, apply circular mask
+                                if (circleCenter.HasValue && circleRadius > 0)
+                                {
+                                    using (var circleMask = new Mat(combinedMask.Size(), MatType.CV_8UC1, new Scalar(0)))
+                                    {
+                                        Cv2.Circle(circleMask, circleCenter.Value, circleRadius, new Scalar(255), -1);
+                                        Cv2.BitwiseAnd(combinedMask, circleMask, combinedMask);
+                                    }
+                                }
+                                
+                                // Find the brightest point within the combined mask
+                                double minVal, maxVal;
+                                OpenCvSharp.Point minLoc, maxLoc;
+                                Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc, combinedMask);
+                                
+                                // Check if any pixel was found in the mask
+                                if (maxVal > 0)
+                                {
+                                    return maxLoc;
+                                }
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    colorMask.Dispose();
+                }
+            }
+            
+            return null;
+        }
+
+        static (Scalar lower, Scalar upper) GetColorRange(LightColor color)
+        {
+            // HSV ranges for different colors
+            // H: 0-180, S: 0-255, V: 0-255 in OpenCV
+            // Note: Lower saturation thresholds allow detection of dimmer/desaturated lights
+            return color switch
+            {
+                // Red is handled separately in FindBrightestPointWithColor due to hue wraparound
+                LightColor.Green => (new Scalar(40, 30, 50), new Scalar(80, 255, 255)),    // Green
+                LightColor.Blue => (new Scalar(100, 30, 50), new Scalar(130, 255, 255)),   // Blue
+                LightColor.Yellow => (new Scalar(20, 70, 100), new Scalar(40, 255, 255)),  // Yellow
+                LightColor.Cyan => (new Scalar(80, 30, 50), new Scalar(100, 255, 255)),    // Cyan
+                LightColor.Magenta => (new Scalar(140, 30, 50), new Scalar(170, 255, 255)),// Magenta
+                LightColor.White => (new Scalar(0, 0, 200), new Scalar(180, 30, 255)),     // White (low saturation, high value)
+                _ => (new Scalar(0, 0, 200), new Scalar(180, 255, 255))                    // Any bright (default)
+            };
         }
 
         static Scalar GetColorAtPoint(Mat frame, OpenCvSharp.Point point)

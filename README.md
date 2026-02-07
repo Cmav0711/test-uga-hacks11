@@ -5,7 +5,9 @@
 A C# application using OpenCV and SixLabors.ImageSharp that detects bright lights in real-time from a camera feed or processes static images.
 
 ### Features
-- **Real-time Camera Tracking**: Tracks the brightest point in each camera frame with calibration support
+- **Color Selection**: Choose specific light colors to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any)
+- **Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
+- **Real-time Camera Tracking**: Tracks lights matching the selected color in each camera frame with calibration support
 - **Automatic PNG Export**: Saves a PNG image of the drawn path when light is not detected for a configurable timeout
 - **Circle-based Point Filtering**: Only tracks points within a configurable radius of the last tracked point, filtering out erratic movements
 - **Adjustable Tracking Radius**: Change the tracking circle size using '+' and '-' keys (default: 100px, range: 10-500px)
@@ -26,7 +28,17 @@ cd ColorDetectionApp
 dotnet run
 ```
 
-This will open your camera and track the brightest point in real-time:
+At startup, you'll be prompted to select which color of light to track:
+- **1. Any bright light** - Tracks any bright light (original behavior)
+- **2. Red** - Tracks red lights only
+- **3. Green** - Tracks green lights only
+- **4. Blue** - Tracks blue lights only
+- **5. Yellow** - Tracks yellow lights only
+- **6. Cyan** - Tracks cyan lights only
+- **7. Magenta** - Tracks magenta lights only
+- **8. White** - Tracks white lights only
+
+After selecting a color, the application will track lights matching that color in real-time:
 - The current brightest point is shown as a large green circle (if within tracking radius) or red circle (if filtered out)
 - All previously tracked points are shown as smaller cyan dots
 - Orange lines connect consecutive points to show the path
