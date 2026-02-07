@@ -780,9 +780,9 @@ namespace ColorDetectionApp
             // Ensure the point is within the frame bounds
             if (point.X >= 0 && point.X < frame.Width && point.Y >= 0 && point.Y < frame.Height)
             {
-                // Get the BGR color at the point
+                // Get the BGR color at the point (OpenCV uses BGR order: Item0=Blue, Item1=Green, Item2=Red)
                 Vec3b color = frame.At<Vec3b>(point.Y, point.X);
-                // Calculate brightness as the maximum of R, G, B values
+                // Calculate brightness as the maximum of B, G, R channels
                 return Math.Max(Math.Max(color.Item0, color.Item1), color.Item2);
             }
             return 0;
