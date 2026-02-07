@@ -6,6 +6,9 @@ A C# console application that uses real-time camera tracking or image processing
 
 ### Real-time Camera Mode (New!)
 - **Live Brightest Point Tracking**: Automatically finds and tracks the single brightest point in each camera frame
+- **Circle-based Filtering**: Only accepts points within a configurable radius of the last tracked point, preventing erratic jumps
+- **Adjustable Tracking Radius**: Use '+' and '-' keys to change the tracking circle size (10-500px, default: 100px)
+- **Visual Tracking Circle**: Purple circle overlay shows the current tracking area around the last tracked point
 - **Calibration Mode**: Press 'b' to calibrate and capture the baseline color of the brightest point
 - **Color Detection**: Displays the RGB color values of the brightest point in real-time
 - **Color Difference Analysis**: When calibrated, shows the color difference from the baseline (useful for detecting color changes when light passes through colored objects/boxes)
@@ -15,8 +18,10 @@ A C# console application that uses real-time camera tracking or image processing
   - Press 'q' to quit
   - Press 'c' to clear the tracked points trail
   - Press 'b' to calibrate with the current brightest point's color
+  - Press '+' to increase tracking radius by 10px
+  - Press '-' to decrease tracking radius by 10px
 - **Real-time Overlay**: Shows current camera feed with overlaid tracking information
-- **Frame Statistics**: Displays count of tracked points and calibration status
+- **Frame Statistics**: Displays count of tracked points, tracking radius, and calibration status
 
 ### Static Image Mode
 - **Bright Light Detection**: Automatically identifies bright light sources in images
@@ -58,15 +63,18 @@ When run without arguments, the application opens your default camera and tracks
 - **'q' or ESC**: Quit the application
 - **'c'**: Clear all tracked points and start fresh
 - **'b'**: Calibrate using the current brightest point's color as baseline
+- **'+' or '='**: Increase tracking radius by 10 pixels (max: 500px)
+- **'-' or '_'**: Decrease tracking radius by 10 pixels (min: 10px)
 
 **What you'll see:**
 - Live camera feed
-- Current brightest point: Large green circle with outline
+- Current brightest point: Large green circle with outline (if within tracking radius) or red circle (if filtered out)
 - Historical brightest points: Smaller cyan dots forming a trail
 - Orange lines connecting consecutive points showing the movement path
+- Purple circle around last tracked point showing the tracking radius
 - Color information: RGB values of the current brightest point
 - Color difference: When calibrated, shows how much the color has changed from baseline
-- Status text: "Points tracked: X" showing total count and "[CALIBRATED]" status
+- Status text: "Points tracked: X | Tracking radius: Ypx" showing total count and current radius, plus "[CALIBRATED]" status
 
 ### Static Image Mode
 
@@ -192,16 +200,18 @@ The real-time tracking works in a simple, efficient manner:
 1. **Frame Capture**: Captures frames from the camera at the camera's native framerate
 2. **Grayscale Conversion**: Converts the color frame to grayscale for efficient brightness analysis
 3. **Brightest Point Detection**: Uses OpenCV's MinMaxLoc to find the pixel with maximum brightness
-4. **Color Extraction**: Captures the BGR color values at the brightest point location
-5. **Calibration Support**: Press 'b' to store the current color as a baseline reference
-6. **Color Difference Calculation**: When calibrated, calculates Euclidean distance in BGR color space between current and baseline colors
-7. **Threshold Filtering**: Only tracks points with brightness >= 200 (0-255 scale) to avoid noise
-8. **Accumulation**: Stores all brightest points from each frame in a list
-9. **Path Visualization**: 
-   - Current brightest point: Large green filled circle (8px radius) with outline (10px radius)
+4. **Distance-based Filtering**: Calculates the distance from the last tracked point to the current brightest point. Only accepts the point if it's within the configured tracking radius (default: 100px)
+5. **Color Extraction**: Captures the BGR color values at the brightest point location
+6. **Calibration Support**: Press 'b' to store the current color as a baseline reference
+7. **Color Difference Calculation**: When calibrated, calculates Euclidean distance in BGR color space between current and baseline colors
+8. **Threshold Filtering**: Only tracks points with brightness >= 200 (0-255 scale) to avoid noise
+9. **Accumulation**: Stores all brightest points that pass the distance filter from each frame in a list
+10. **Path Visualization**: 
+   - Current brightest point: Large green filled circle (8px radius) with outline (10px radius) if within tracking radius, or red if filtered out
    - Historical points: Small cyan filled circles (3px radius)
    - Connecting lines: Orange lines (2px width) between consecutive points
-   - Text overlays: Shows RGB color values, color difference (if calibrated), and total count of tracked points
+   - Tracking circle: Purple circle (2px width) with radius equal to tracking radius around the last tracked point
+   - Text overlays: Shows RGB color values, color difference (if calibrated), total count of tracked points, and current tracking radius
 
 ### Static Image Detection
 
