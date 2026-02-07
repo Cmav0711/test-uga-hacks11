@@ -6,7 +6,15 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
 
 ### Key Features
 
-- **🔧 Configurable Contour Approximation (NEW!)**: Advanced contour simplification with interactive adjustment
+- **🚀 Statistical Outlier Detection (NEW!)**: Automatic removal of extreme outliers from tracked points
+  - Uses robust statistical methods (IQR and Modified Z-score with MAD)
+  - Hybrid approach combining multiple algorithms for best results
+  - Toggle on/off with 'x' key during tracking
+  - Enabled by default to ensure clean, accurate drawings
+  - Displays outlier removal statistics during export
+  - Test with `dotnet run --test-outlier-detection`
+
+- **🔧 Configurable Contour Approximation**: Advanced contour simplification with interactive adjustment
   - Configurable epsilon parameter for precise control
   - Multi-level visualization showing different approximation levels
   - Interactive mode for real-time parameter tuning
@@ -90,6 +98,7 @@ After selecting both colors, the application will track lights and detect color 
 - Press '[' to decrease no-light timeout, ']' to increase (default: 3.0s)
 - Press 'o' to increase capture circle size, 'i' to decrease (default: 150px)
 - Press 's' to take a circular screenshot of the capture region
+- Press 'x' to toggle outlier detection on/off (default: ON)
 - Press 'f' to flip/mirror the camera display
 - Press 'q' to quit
 - Press 'c' to clear the tracked points
@@ -137,6 +146,14 @@ dotnet run --test-contour-approx path/to/image.png
 dotnet run --interactive-contour path/to/image.png
 ```
 
+#### Outlier Detection Testing
+```bash
+cd ColorDetectionApp
+
+# Run outlier detection test suite
+dotnet run --test-outlier-detection
+```
+
 ### Documentation
 
 - **[ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md)** - ⭐ **Comprehensive guide to enhanced shape detection** (recommended read)
@@ -159,7 +176,9 @@ dotnet run --interactive-contour path/to/image.png
 - Color difference from baseline (when calibrated)
 - Frame counter showing number of points tracked, current tracking radius, and no-light timeout
 - Calibration status indicator
+- Outlier detection status indicator (ON/OFF)
 - Automatic PNG export when light is not detected for the configured timeout
+- Outlier removal statistics displayed in console when exporting
 
 #### Static Image Mode
 The application detects bright lights and provides:

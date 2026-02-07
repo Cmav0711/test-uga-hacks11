@@ -23,6 +23,12 @@ A C# console application that uses real-time camera tracking or image processing
   - **Symbol Detection on Export**: Each exported PNG is automatically analyzed for symbol matches
   - Results saved to `detected_symbols.csv` with detailed information
 - **Adjustable No-Light Timeout**: Use '[' and ']' keys to change the timeout for automatic PNG export (0.5-30.0s, default: 3.0s)
+- **Statistical Outlier Detection (NEW!)**: Automatically removes extreme outliers from tracked points before exporting
+  - Uses robust statistical methods: IQR (Interquartile Range) and Modified Z-score with MAD (Median Absolute Deviation)
+  - Hybrid approach combining multiple algorithms for optimal accuracy
+  - Toggle on/off with 'x' key (enabled by default)
+  - Displays outlier removal statistics when exporting
+  - Ensures clean, accurate drawings by filtering out erratic jumps and noise
 - **Circle-based Filtering**: Only accepts points within a configurable radius of the last tracked point, preventing erratic jumps
 - **Adjustable Tracking Radius**: Use '+' and '-' keys to change the tracking circle size (10-500px, default: 100px)
 - **Visual Tracking Circle**: Purple circle overlay shows the current tracking area around the last tracked point
@@ -42,6 +48,7 @@ A C# console application that uses real-time camera tracking or image processing
   - Press 'o' to increase capture circle size by 10px
   - Press 'i' to decrease capture circle size by 10px
   - Press 's' to take a circular screenshot
+  - Press 'x' to toggle outlier detection on/off
   - Press 'f' to flip/mirror the camera display
 - **Real-time Overlay**: Shows current camera feed with overlaid tracking information
 - **Frame Statistics**: Displays count of tracked points, tracking radius, no-light timeout, capture circle radius, and calibration status
