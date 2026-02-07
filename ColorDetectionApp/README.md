@@ -8,8 +8,8 @@ A C# console application that uses real-time camera tracking or image processing
 - **Color Selection at Startup**: Choose which color of light to track (Red, Green, Blue, Yellow, Cyan, Magenta, White, or Any bright light)
 - **HSV Color-Based Detection**: Uses HSV color space for accurate color matching of light sources
 - **Live Color-Specific Tracking**: Automatically finds and tracks lights matching the selected color in each camera frame
-- **Automatic PNG Export**: When light is not detected for a configurable timeout (default: 3.0s), the drawn path is automatically saved as a PNG file
-- **Adjustable No-Light Timeout**: Use '[' and ']' keys to change the timeout for automatic PNG export (0.5-30.0s, default: 3.0s)
+- **Automatic PNG and CSV Export**: When light is not detected for a configurable timeout (default: 3.0s), the drawn path is automatically saved as a PNG file and point data is exported to a CSV file
+- **Adjustable No-Light Timeout**: Use '[' and ']' keys to change the timeout for automatic PNG and CSV export (0.5-30.0s, default: 3.0s)
 - **Circle-based Filtering**: Only accepts points within a configurable radius of the last tracked point, preventing erratic jumps
 - **Adjustable Tracking Radius**: Use '+' and '-' keys to change the tracking circle size (10-500px, default: 100px)
 - **Visual Tracking Circle**: Purple circle overlay shows the current tracking area around the last tracked point
@@ -97,7 +97,8 @@ Simply enter the number (1-8) corresponding to your choice. The application will
 - Color information: RGB values of the current brightest point
 - Color difference: When calibrated, shows how much the color has changed from baseline
 - Status text: "Points tracked: X | Tracking radius: Ypx | Timeout: Zs" showing total count, current radius, and no-light timeout, plus "[CALIBRATED]" status
-- Automatic PNG export: When light is not detected for the configured timeout, a PNG file is saved with format: `light_drawing_YYYYMMDD_HHMMSS.png`
+- Automatic PNG and CSV export: When light is not detected for the configured timeout, files are saved with format: `light_drawing_YYYYMMDD_HHMMSS.png` and `light_drawing_YYYYMMDD_HHMMSS.csv`
+- After export, all tracked points are automatically cleared to start fresh for the next drawing session
 
 ### Static Image Mode
 
@@ -260,11 +261,14 @@ The real-time tracking works in a simple, efficient manner:
    - Connecting lines: Orange lines (2px width) between consecutive points
    - Tracking circle: Purple circle (2px width) with radius equal to tracking radius around the last tracked point
    - Text overlays: Shows RGB color values, color difference (if calibrated), total count of tracked points, current tracking radius, and no-light timeout
-12. **No-Light Detection & PNG Export**:
+12. **No-Light Detection & Automatic Export**:
    - Tracks the time when light was last detected
-   - If no bright point is detected for the configured timeout duration (default: 3.0s), automatically exports the tracked path to a PNG file
-   - Exported image shows the complete drawing with yellow connecting lines and cyan point markers on a black background
-   - Files are saved with timestamp: `light_drawing_YYYYMMDD_HHMMSS.png`
+   - If no bright point is detected for the configured timeout duration (default: 3.0s), automatically exports:
+     - The tracked path to a PNG file (`light_drawing_YYYYMMDD_HHMMSS.png`)
+     - Point coordinates to a CSV file (`light_drawing_YYYYMMDD_HHMMSS.csv`)
+   - Exported PNG shows the complete drawing with yellow connecting lines and cyan point markers on a black background
+   - CSV format: Header row with `Index,X,Y` followed by data rows (e.g., `0,100,150`)
+   - After export, all tracked points are automatically cleared for the next drawing session
    - Export only happens once per drawing session until light is detected again
 
 ### Static Image Detection

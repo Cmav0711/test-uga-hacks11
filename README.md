@@ -49,7 +49,7 @@ After selecting a color, the application will track lights matching that color i
 - Press '[' to decrease no-light timeout, ']' to increase (default: 3.0s)
 - Press 'q' to quit
 - Press 'c' to clear the tracked points
-- When light is not detected for the configured timeout, a PNG image is automatically saved
+- When light is not detected for the configured timeout, a PNG image and CSV file are automatically saved, and all points are cleared
 
 #### Static Image Mode
 ```bash
@@ -75,7 +75,8 @@ See [ColorDetectionApp/README.md](ColorDetectionApp/README.md) for detailed usag
 - Color difference from baseline (when calibrated)
 - Frame counter showing number of points tracked, current tracking radius, and no-light timeout
 - Calibration status indicator
-- Automatic PNG export when light is not detected for the configured timeout
+- Automatic PNG and CSV export when light is not detected for the configured timeout
+- After export, all tracked points are automatically cleared
 
 #### Static Image Mode
 The application detects bright lights and provides:

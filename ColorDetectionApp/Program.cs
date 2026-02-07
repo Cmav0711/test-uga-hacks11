@@ -183,12 +183,19 @@ namespace ColorDetectionApp
                             !imageExported &&
                             (DateTime.Now - lastLightDetectedTime.Value).TotalSeconds >= noLightTimeout)
                         {
-                            // Export the drawing to PNG
+                            // Export the drawing to PNG and CSV
                             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                            string filename = $"light_drawing_{timestamp}.png";
-                            ExportDrawingToPng(brightestPoints, (int)capture.FrameWidth, (int)capture.FrameHeight, filename);
-                            Console.WriteLine($"\nNo light detected for {noLightTimeout}s - Drawing exported to: {filename}");
+                            string pngFilename = $"light_drawing_{timestamp}.png";
+                            string csvFilename = $"light_drawing_{timestamp}.csv";
+                            ExportDrawingToPng(brightestPoints, (int)capture.FrameWidth, (int)capture.FrameHeight, pngFilename);
+                            ExportPointsToCsv(brightestPoints, csvFilename);
+                            Console.WriteLine($"\nNo light detected for {noLightTimeout}s - Drawing exported to: {pngFilename}");
+                            Console.WriteLine($"Points data exported to: {csvFilename}");
                             imageExported = true;
+                            
+                            // Clear all points after export
+                            brightestPoints.Clear();
+                            Console.WriteLine("All points cleared after export");
                         }
 
                         // Draw lines connecting consecutive points
@@ -488,6 +495,29 @@ namespace ColorDetectionApp
 
                 // Save the image
                 image.Save(filename);
+            }
+        }
+
+        static void ExportPointsToCsv(List<OpenCvSharp.Point> points, string filename)
+        {
+            try
+            {
+                // Create CSV file with point data using UTF-8 encoding
+                using (var writer = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
+                {
+                    // Write header
+                    writer.WriteLine("Index,X,Y");
+                    
+                    // Write each point
+                    for (int i = 0; i < points.Count; i++)
+                    {
+                        writer.WriteLine($"{i},{points[i].X},{points[i].Y}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error exporting CSV: {ex.Message}");
             }
         }
 
