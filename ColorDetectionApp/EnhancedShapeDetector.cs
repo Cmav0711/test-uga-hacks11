@@ -28,9 +28,47 @@ namespace ColorDetectionApp
                     return ("unknown", 0.0);
                 }
 
+                var (shape, confidence, _) = DetectShapeFromMat(image, epsilonFactor);
+                return (shape, confidence);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in enhanced shape detection: {ex.Message}");
+                return ("error", 0.0);
+            }
+        }
+
+        /// <summary>
+        /// Detects shapes from a Mat object for real-time detection.
+        /// This method is rotation-invariant, scale-invariant, and works well with
+        /// hand-drawn or messy shapes.
+        /// </summary>
+        /// <param name="image">Input image (can be color or grayscale)</param>
+        /// <param name="epsilonFactor">Optional contour approximation epsilon factor (default: 0.04)</param>
+        public static (string shape, double confidence, Point[] contour) DetectShapeFromMat(Mat image, double epsilonFactor = 0.04)
+        {
+            try
+            {
+                if (image.Empty())
+                {
+                    return ("unknown", 0.0, Array.Empty<Point>());
+                }
+
+                // Convert to grayscale if needed
+                Mat gray;
+                if (image.Channels() > 1)
+                {
+                    gray = new Mat();
+                    Cv2.CvtColor(image, gray, ColorConversionCodes.BGR2GRAY);
+                }
+                else
+                {
+                    gray = image;
+                }
+
                 // Preprocess: Apply Gaussian blur to reduce noise
                 using var blurred = new Mat();
-                Cv2.GaussianBlur(image, blurred, new Size(5, 5), 0);
+                Cv2.GaussianBlur(gray, blurred, new Size(5, 5), 0);
 
                 // Apply adaptive thresholding for better handling of uneven lighting
                 using var thresh = new Mat();
@@ -45,7 +83,7 @@ namespace ColorDetectionApp
 
                 if (contours.Length == 0)
                 {
-                    return ("empty", 0.0);
+                    return ("empty", 0.0, Array.Empty<Point>());
                 }
 
                 // Get the largest contour (assuming it's the main shape)
@@ -54,12 +92,20 @@ namespace ColorDetectionApp
                     .First();
 
                 // Analyze the shape with custom epsilon factor
-                return AnalyzeContour(largestContour, epsilonFactor);
+                var (shape, confidence) = AnalyzeContour(largestContour, epsilonFactor);
+
+                // Clean up if we created a new grayscale image
+                if (image.Channels() > 1)
+                {
+                    gray.Dispose();
+                }
+
+                return (shape, confidence, largestContour);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in enhanced shape detection: {ex.Message}");
-                return ("error", 0.0);
+                return ("error", 0.0, Array.Empty<Point>());
             }
         }
 
