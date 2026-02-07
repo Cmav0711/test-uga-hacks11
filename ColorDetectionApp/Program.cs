@@ -26,6 +26,10 @@ namespace ColorDetectionApp
 
     class Program
     {
+        // Key codes for F11 - can vary by platform
+        private const int F11_KEY_CODE_PRIMARY = 65478;
+        private const int F11_KEY_CODE_ALTERNATE = 65470;
+        
         static void Main(string[] args)
         {
             Console.WriteLine("Bright Light Color Detection and Mapping");
@@ -466,7 +470,7 @@ namespace ColorDetectionApp
                             flipCamera = !flipCamera;
                             Console.WriteLine($"Camera flip {(flipCamera ? "enabled" : "disabled")} - image is {(flipCamera ? "mirrored" : "normal")}");
                         }
-                        else if (key == 65478 || key == 65470) // F11 key codes (can vary by platform)
+                        else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
                         {
                             // Toggle fullscreen mode
                             isFullscreen = !isFullscreen;
