@@ -215,6 +215,9 @@ namespace ColorDetectionApp
             // Camera flip state (adjustable via 'f' key)
             bool flipCamera = false;
             
+            // Fullscreen state (adjustable via F11 key)
+            bool isFullscreen = false;
+            
             // Open the default camera
             using (var capture = new VideoCapture(0))
             {
@@ -238,6 +241,7 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press 's' to take circular screenshot");
                 Console.WriteLine("Press 'x' to toggle outlier detection (currently: ON)");
                 Console.WriteLine("Press 'f' to flip/mirror camera");
+                Console.WriteLine("Press 'F11' to toggle fullscreen mode");
                 
                 // Calculate center point once (frame dimensions don't change)
                 var centerPoint = new OpenCvSharp.Point((int)capture.FrameWidth / 2, (int)capture.FrameHeight / 2);
@@ -461,6 +465,21 @@ namespace ColorDetectionApp
                             // Toggle camera flip/mirror
                             flipCamera = !flipCamera;
                             Console.WriteLine($"Camera flip {(flipCamera ? "enabled" : "disabled")} - image is {(flipCamera ? "mirrored" : "normal")}");
+                        }
+                        else if (key == 65478 || key == 65470) // F11 key codes (can vary by platform)
+                        {
+                            // Toggle fullscreen mode
+                            isFullscreen = !isFullscreen;
+                            if (isFullscreen)
+                            {
+                                Cv2.SetWindowProperty(window.Name, WindowPropertyFlags.Fullscreen, 1.0);
+                                Console.WriteLine("Fullscreen mode: ENABLED");
+                            }
+                            else
+                            {
+                                Cv2.SetWindowProperty(window.Name, WindowPropertyFlags.Fullscreen, 0.0);
+                                Console.WriteLine("Fullscreen mode: DISABLED");
+                            }
                         }
                     }
                 }
