@@ -31,6 +31,9 @@ namespace ColorDetectionApp
         private const double MIN_SAVED_CONFIDENCE = 0.60;     // Higher threshold for saved results
         private const int MIN_POINTS_FOR_DETECTION = 10;       // Minimum tracked points before detection starts
         private const double ASSUMED_CAMERA_FPS = 30.0;        // Assumed framerate for detection interval calculations
+        // Key codes for F11 - can vary by platform
+        private const int F11_KEY_CODE_PRIMARY = 65478;
+        private const int F11_KEY_CODE_ALTERNATE = 65470;
         
         static void Main(string[] args)
         {
@@ -228,6 +231,8 @@ namespace ColorDetectionApp
             string currentDetectedShape = "none";
             double currentShapeConfidence = 0.0;
             OpenCvSharp.Point[] currentShapeContour = Array.Empty<OpenCvSharp.Point>();
+            // Fullscreen state (adjustable via F11 key)
+            bool isFullscreen = false;
             
             // Open the default camera
             using (var capture = new VideoCapture(0))
@@ -254,6 +259,7 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press 'r' to toggle real-time shape detection (currently: ON)");
                 Console.WriteLine("Press 'd' to decrease detection interval (more frequent), 'D' to increase (less frequent)");
                 Console.WriteLine("Press 'f' to flip/mirror camera");
+                Console.WriteLine("Press 'F11' to toggle fullscreen mode");
                 
                 // Calculate center point once (frame dimensions don't change)
                 var centerPoint = new OpenCvSharp.Point((int)capture.FrameWidth / 2, (int)capture.FrameHeight / 2);
@@ -562,6 +568,20 @@ namespace ColorDetectionApp
                                 if (detectionFrameInterval < 5) detectionFrameInterval = 5;
                             }
                             Console.WriteLine($"Detection frame interval: every {detectionFrameInterval} frames ({ASSUMED_CAMERA_FPS/detectionFrameInterval:F1} times per second)");
+                        else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
+                        {
+                            // Toggle fullscreen mode
+                            isFullscreen = !isFullscreen;
+                            if (isFullscreen)
+                            {
+                                Cv2.SetWindowProperty(window.Name, WindowPropertyFlags.Fullscreen, 1.0);
+                                Console.WriteLine("Fullscreen mode: ENABLED");
+                            }
+                            else
+                            {
+                                Cv2.SetWindowProperty(window.Name, WindowPropertyFlags.Fullscreen, 0.0);
+                                Console.WriteLine("Fullscreen mode: DISABLED");
+                            }
                         }
                     }
                 }
