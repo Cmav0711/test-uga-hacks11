@@ -330,14 +330,33 @@ namespace ColorDetectionApp
             {
                 Cv2.CvtColor(frame, hsvFrame, ColorConversionCodes.BGR2HSV);
                 
-                // Define color ranges in HSV space
-                var (lowerBound, upperBound) = GetColorRange(targetColor);
+                Mat colorMask;
                 
-                // Create mask for the target color
-                using (var colorMask = new Mat())
+                // Special handling for red since it wraps around in HSV space
+                if (targetColor == LightColor.Red)
                 {
-                    Cv2.InRange(hsvFrame, lowerBound, upperBound, colorMask);
+                    // Red is at both ends of the hue spectrum (0-10 and 170-180)
+                    using (var lowerRedMask = new Mat())
+                    using (var upperRedMask = new Mat())
+                    {
+                        Cv2.InRange(hsvFrame, new Scalar(0, 70, 100), new Scalar(10, 255, 255), lowerRedMask);
+                        Cv2.InRange(hsvFrame, new Scalar(170, 70, 100), new Scalar(180, 255, 255), upperRedMask);
+                        colorMask = new Mat();
+                        Cv2.BitwiseOr(lowerRedMask, upperRedMask, colorMask);
+                    }
+                }
+                else
+                {
+                    // Define color ranges in HSV space
+                    var (lowerBound, upperBound) = GetColorRange(targetColor);
                     
+                    // Create mask for the target color
+                    colorMask = new Mat();
+                    Cv2.InRange(hsvFrame, lowerBound, upperBound, colorMask);
+                }
+                
+                try
+                {
                     // Apply brightness threshold to the color mask
                     using (var gray = new Mat())
                     {
@@ -376,6 +395,10 @@ namespace ColorDetectionApp
                         }
                     }
                 }
+                finally
+                {
+                    colorMask.Dispose();
+                }
             }
             
             return null;
@@ -385,15 +408,15 @@ namespace ColorDetectionApp
         {
             // HSV ranges for different colors
             // H: 0-180, S: 0-255, V: 0-255 in OpenCV
+            // Note: Lower saturation thresholds allow detection of dimmer/desaturated lights
             return color switch
             {
-                LightColor.Red => (new Scalar(0, 100, 100), new Scalar(10, 255, 255)),     // Red (lower range)
-                                                                                             // Note: Red wraps around at 0/180, might need two ranges
-                LightColor.Green => (new Scalar(40, 50, 50), new Scalar(80, 255, 255)),    // Green
-                LightColor.Blue => (new Scalar(100, 50, 50), new Scalar(130, 255, 255)),   // Blue
-                LightColor.Yellow => (new Scalar(20, 100, 100), new Scalar(40, 255, 255)), // Yellow
-                LightColor.Cyan => (new Scalar(80, 50, 50), new Scalar(100, 255, 255)),    // Cyan
-                LightColor.Magenta => (new Scalar(140, 50, 50), new Scalar(170, 255, 255)),// Magenta
+                // Red is handled separately in FindBrightestPointWithColor due to hue wraparound
+                LightColor.Green => (new Scalar(40, 30, 50), new Scalar(80, 255, 255)),    // Green
+                LightColor.Blue => (new Scalar(100, 30, 50), new Scalar(130, 255, 255)),   // Blue
+                LightColor.Yellow => (new Scalar(20, 70, 100), new Scalar(40, 255, 255)),  // Yellow
+                LightColor.Cyan => (new Scalar(80, 30, 50), new Scalar(100, 255, 255)),    // Cyan
+                LightColor.Magenta => (new Scalar(140, 30, 50), new Scalar(170, 255, 255)),// Magenta
                 LightColor.White => (new Scalar(0, 0, 200), new Scalar(180, 30, 255)),     // White (low saturation, high value)
                 _ => (new Scalar(0, 0, 200), new Scalar(180, 255, 255))                    // Any bright (default)
             };
