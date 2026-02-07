@@ -6,8 +6,10 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
 
 ### Features
 - **Real-time Camera Tracking**: Tracks the brightest point in each camera frame with calibration support
+- **Automatic PNG Export**: Saves a PNG image of the drawn path when light is not detected for a configurable timeout
 - **Circle-based Point Filtering**: Only tracks points within a configurable radius of the last tracked point, filtering out erratic movements
 - **Adjustable Tracking Radius**: Change the tracking circle size using '+' and '-' keys (default: 100px, range: 10-500px)
+- **Adjustable No-Light Timeout**: Change the timeout for automatic PNG export using '[' and ']' keys (default: 3.0s, range: 0.5-30.0s)
 - **Color Detection and Analysis**: Captures and displays RGB color values of bright points
 - **Calibration Mode**: Establish baseline color to detect color changes when light passes through objects
 - **Path Visualization**: Displays accumulated trail with lines connecting consecutive points
@@ -32,8 +34,10 @@ This will open your camera and track the brightest point in real-time:
 - RGB color values are displayed on screen
 - Press 'b' to calibrate and capture baseline color for comparison
 - Press '+' to increase tracking radius, '-' to decrease (default: 100px)
+- Press '[' to decrease no-light timeout, ']' to increase (default: 3.0s)
 - Press 'q' to quit
 - Press 'c' to clear the tracked points
+- When light is not detected for the configured timeout, a PNG image is automatically saved
 
 #### Static Image Mode
 ```bash
@@ -57,8 +61,9 @@ See [ColorDetectionApp/README.md](ColorDetectionApp/README.md) for detailed usag
 - Purple circle showing the tracking radius around the last tracked point
 - RGB color information displayed on screen
 - Color difference from baseline (when calibrated)
-- Frame counter showing number of points tracked and current tracking radius
+- Frame counter showing number of points tracked, current tracking radius, and no-light timeout
 - Calibration status indicator
+- Automatic PNG export when light is not detected for the configured timeout
 
 #### Static Image Mode
 The application detects bright lights and provides:
