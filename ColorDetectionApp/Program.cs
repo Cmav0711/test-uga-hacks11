@@ -45,6 +45,25 @@ namespace ColorDetectionApp
                 return;
             }
 
+            if (args.Length > 0 && args[0] == "--test-enhanced")
+            {
+                Console.WriteLine("Testing enhanced shape detector...");
+                TestEnhancedShapeDetector();
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--analyze-shape")
+            {
+                if (args.Length < 2)
+                {
+                    Console.WriteLine("Usage: dotnet run --analyze-shape <image_path>");
+                    return;
+                }
+                Console.WriteLine("\nAnalyzing shape in image...");
+                Console.WriteLine(EnhancedShapeDetector.GetShapeAnalysisDetails(args[1]));
+                return;
+            }
+
             if (args.Length == 0)
             {
                 // Prompt user to select target light color
@@ -224,8 +243,8 @@ namespace ColorDetectionApp
                             Console.WriteLine($"\nNo light detected for {noLightTimeout}s - Drawing exported to: {pngFilename}");
                             Console.WriteLine($"Points data exported to: {csvFilename}");
                             
-                            // Perform symbol detection on the exported image
-                            DetectAndRecordSymbols(pngFilename);
+                            // Perform symbol detection on the exported image using enhanced detector
+                            DetectAndRecordSymbolsEnhanced(pngFilename);
                             
                             imageExported = true;
                             
@@ -632,8 +651,8 @@ namespace ColorDetectionApp
                 }
             }
             
-            // After saving, perform symbol detection
-            DetectAndRecordSymbols(filename);
+            // After saving, perform symbol detection using enhanced detector
+            DetectAndRecordSymbolsEnhanced(filename);
         }
 
         public static void DetectAndRecordSymbols(string imageFilename)
@@ -796,6 +815,110 @@ namespace ColorDetectionApp
             {
                 Console.WriteLine($"Error updating symbols CSV: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Enhanced symbol detection using geometric shape analysis.
+        /// Falls back to template matching if enhanced detection has low confidence.
+        /// </summary>
+        public static void DetectAndRecordSymbolsEnhanced(string imageFilename)
+        {
+            try
+            {
+                Console.WriteLine($"\n=== Enhanced Shape Detection ===");
+                
+                // Try enhanced detector first (works better for hand-drawn shapes)
+                var (shape, confidence) = EnhancedShapeDetector.DetectShape(imageFilename);
+                
+                Console.WriteLine($"Enhanced detection: {shape} ({confidence:F3})");
+                
+                // If enhanced detection is confident (>60%), use it
+                if (confidence > 0.60)
+                {
+                    var detectedSymbols = new List<(string symbolName, double confidence)>
+                    {
+                        (shape, confidence)
+                    };
+                    UpdateSymbolsCsv(imageFilename, detectedSymbols);
+                    return;
+                }
+                
+                // Otherwise, try template matching as fallback
+                Console.WriteLine("Confidence too low, trying template matching...");
+                DetectAndRecordSymbols(imageFilename);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in enhanced detection: {ex.Message}");
+                // Final fallback to template matching
+                DetectAndRecordSymbols(imageFilename);
+            }
+        }
+
+        /// <summary>
+        /// Test the enhanced shape detector with generated symbols.
+        /// </summary>
+        static void TestEnhancedShapeDetector()
+        {
+            Console.WriteLine("Enhanced Shape Detector Test");
+            Console.WriteLine("============================\n");
+
+            // Check if symbols exist
+            if (!Directory.Exists("symbols"))
+            {
+                Console.WriteLine("Generating test symbols...");
+                SymbolTemplateGenerator.GenerateExampleTemplates();
+            }
+
+            // Test each shape type
+            var testFiles = new Dictionary<string, string>
+            {
+                { "Circle", "symbols/circle/circle_1.png" },
+                { "Square", "symbols/square/square_1.png" },
+                { "Triangle", "symbols/triangle/triangle_1.png" },
+                { "Star", "symbols/star/star_1.png" }
+            };
+
+            Console.WriteLine("Testing shape detection accuracy:\n");
+
+            foreach (var (expectedShape, filePath) in testFiles)
+            {
+                if (File.Exists(filePath))
+                {
+                    var (detectedShape, confidence) = EnhancedShapeDetector.DetectShape(filePath);
+                    var match = detectedShape.ToLower().Contains(expectedShape.ToLower()) ? "✓" : "✗";
+                    
+                    Console.WriteLine($"{match} {expectedShape,-10} -> Detected: {detectedShape,-12} (confidence: {confidence:F3})");
+                    
+                    // Show detailed analysis for first shape
+                    if (expectedShape == "Circle")
+                    {
+                        Console.WriteLine("\nDetailed analysis for circle:");
+                        Console.WriteLine(EnhancedShapeDetector.GetShapeAnalysisDetails(filePath));
+                        Console.WriteLine();
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"✗ {expectedShape,-10} -> File not found: {filePath}");
+                }
+            }
+
+            Console.WriteLine("\n" + new string('=', 50));
+            Console.WriteLine("Comparison: Enhanced vs Template Matching");
+            Console.WriteLine(new string('=', 50));
+            Console.WriteLine("\nEnhanced Detector Advantages:");
+            Console.WriteLine("✓ Rotation invariant - works with tilted shapes");
+            Console.WriteLine("✓ Scale invariant - works with different sizes");
+            Console.WriteLine("✓ Better for hand-drawn shapes");
+            Console.WriteLine("✓ Works without training images");
+            Console.WriteLine("✓ Analyzes geometric properties");
+            Console.WriteLine("\nTemplate Matching Advantages:");
+            Console.WriteLine("✓ Can learn custom symbols from examples");
+            Console.WriteLine("✓ Good for very specific symbol patterns");
+            Console.WriteLine("✓ Can match exact templates");
+            
+            Console.WriteLine("\nRecommendation: Use enhanced detector for hand-drawn shapes!");
         }
 
         static void GenerateSampleImage(string outputPath)
