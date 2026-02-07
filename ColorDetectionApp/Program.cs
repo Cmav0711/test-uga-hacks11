@@ -81,30 +81,24 @@ namespace ColorDetectionApp
                         }
 
                         // Find the brightest point in this frame
-                        var brightestPoint = FindBrightestPoint(frame);
+                        // If we have previous points, only search within the tracking circle
+                        OpenCvSharp.Point? searchCenter = null;
+                        if (brightestPoints.Count > 0)
+                        {
+                            searchCenter = brightestPoints[brightestPoints.Count - 1];
+                        }
+                        var brightestPoint = FindBrightestPoint(frame, searchCenter, trackingRadius);
                         
                         if (brightestPoint.HasValue)
                         {
-                            // Check if the point is within tracking radius of the last point
-                            bool shouldAdd = true;
-                            if (brightestPoints.Count > 0)
-                            {
-                                var lastPoint = brightestPoints[brightestPoints.Count - 1];
-                                double distance = CalculateDistance(lastPoint, brightestPoint.Value);
-                                shouldAdd = distance <= trackingRadius;
-                            }
-                            
-                            if (shouldAdd)
-                            {
-                                // Add to our collection
-                                brightestPoints.Add(brightestPoint.Value);
-                            }
+                            // Add to our collection (already filtered by circle search)
+                            brightestPoints.Add(brightestPoint.Value);
                             
                             // Get the color at the brightest point
                             var color = GetColorAtPoint(frame, brightestPoint.Value);
                             
-                            // Draw the current brightest point (large, bright green if valid, red if filtered out)
-                            var pointColor = shouldAdd ? new Scalar(0, 255, 0) : new Scalar(0, 0, 255);
+                            // Draw the current brightest point (large, bright green)
+                            var pointColor = new Scalar(0, 255, 0);
                             Cv2.Circle(frame, brightestPoint.Value, 8, pointColor, -1);
                             Cv2.Circle(frame, brightestPoint.Value, 10, pointColor, 2);
                             
@@ -199,22 +193,46 @@ namespace ColorDetectionApp
             }
         }
 
-        static OpenCvSharp.Point? FindBrightestPoint(Mat frame)
+        static OpenCvSharp.Point? FindBrightestPoint(Mat frame, OpenCvSharp.Point? circleCenter = null, int circleRadius = 0)
         {
             // Convert to grayscale for easier brightness analysis
             using (var gray = new Mat())
             {
                 Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
                 
-                // Find the location of the maximum brightness
-                double minVal, maxVal;
-                OpenCvSharp.Point minLoc, maxLoc;
-                Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc);
-                
-                // Only return if brightness is above threshold (to avoid noise in dark scenes)
-                if (maxVal >= 200)
+                // If we have a circle center, only search within that circle
+                if (circleCenter.HasValue && circleRadius > 0)
                 {
-                    return maxLoc;
+                    // Create a mask for the circular region
+                    using (var mask = new Mat(gray.Size(), MatType.CV_8UC1, new Scalar(0)))
+                    {
+                        // Draw a filled white circle on the mask
+                        Cv2.Circle(mask, circleCenter.Value, circleRadius, new Scalar(255), -1);
+                        
+                        // Find the location of the maximum brightness within the masked region
+                        double minVal, maxVal;
+                        OpenCvSharp.Point minLoc, maxLoc;
+                        Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc, mask);
+                        
+                        // Only return if brightness is above threshold (to avoid noise in dark scenes)
+                        if (maxVal >= 200)
+                        {
+                            return maxLoc;
+                        }
+                    }
+                }
+                else
+                {
+                    // No circle specified, search the entire frame
+                    double minVal, maxVal;
+                    OpenCvSharp.Point minLoc, maxLoc;
+                    Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc);
+                    
+                    // Only return if brightness is above threshold (to avoid noise in dark scenes)
+                    if (maxVal >= 200)
+                    {
+                        return maxLoc;
+                    }
                 }
             }
             
