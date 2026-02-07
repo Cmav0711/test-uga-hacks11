@@ -99,15 +99,18 @@ The application uses OpenCV's template matching algorithm:
 1. **Load Template**: Reads all PNG/JPG files from `symbols/` directory
 2. **Convert to Grayscale**: Both captured image and templates are converted to grayscale
 3. **Template Matching**: Uses CCoeffNormed matching method
-4. **Confidence Threshold**: Only matches with ≥70% confidence are reported
-5. **Record Results**: Appends findings to `detected_symbols.csv`
+4. **Lenient Threshold**: Matches with ≥30% confidence are reported
+5. **Always Choose One**: If no symbol meets the threshold, the best match is always selected
+6. **Record Results**: Appends findings to `detected_symbols.csv`
 
 ### Confidence Scores
 
 - **0.90 - 1.00**: Excellent match, very high confidence
 - **0.80 - 0.89**: Good match, high confidence
-- **0.70 - 0.79**: Acceptable match, moderate confidence
-- **< 0.70**: Rejected (not reported)
+- **0.70 - 0.79**: Good match, moderate-high confidence
+- **0.50 - 0.69**: Acceptable match, moderate confidence
+- **0.30 - 0.49**: Weak match, low confidence
+- **< 0.30**: Very weak match (only reported if it's the best available match)
 
 ## Testing Symbol Detection
 
@@ -178,11 +181,10 @@ To change the confidence threshold, edit `Program.cs`:
 
 ```csharp
 // In DetectAndRecordSymbols method
-if (maxVal >= 0.7)  // Change 0.7 to your preferred threshold (0.0-1.0)
-{
-    detectedSymbols.Add((symbolName, maxVal));
-}
+const double lenientThreshold = 0.3; // Change 0.3 to your preferred threshold (0.0-1.0)
 ```
+
+Note: The symbol detection now uses a lenient threshold of 0.3 (30%) and always selects at least one symbol. If no symbols meet the threshold, the best match is automatically chosen.
 
 ### Multiple Symbol Detection
 

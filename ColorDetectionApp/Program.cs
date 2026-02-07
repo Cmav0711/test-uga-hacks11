@@ -659,7 +659,7 @@ namespace ColorDetectionApp
                             return;
                         }
 
-                        var detectedSymbols = new List<(string symbolName, double confidence)>();
+                        var allSymbolMatches = new List<(string symbolName, double confidence)>();
 
                         // Match against each symbol template
                         foreach (var symbolFile in symbolFiles)
@@ -681,13 +681,28 @@ namespace ColorDetectionApp
                                     // Find the best match
                                     Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out _);
                                     
-                                    // Consider it a match if confidence is above threshold (0.7)
-                                    if (maxVal >= 0.7)
-                                    {
-                                        detectedSymbols.Add((symbolName, maxVal));
-                                    }
+                                    // Store all matches for comparison
+                                    allSymbolMatches.Add((symbolName, maxVal));
                                 }
                             }
+                        }
+
+                        // Be very forgiving: use lenient threshold and always choose at least one symbol
+                        var detectedSymbols = new List<(string symbolName, double confidence)>();
+                        const double lenientThreshold = 0.3; // More forgiving threshold
+                        
+                        // First, add all symbols above the lenient threshold
+                        var aboveThreshold = allSymbolMatches.Where(m => m.confidence >= lenientThreshold).ToList();
+                        
+                        if (aboveThreshold.Any())
+                        {
+                            detectedSymbols.AddRange(aboveThreshold);
+                        }
+                        else if (allSymbolMatches.Any())
+                        {
+                            // Always choose at least one: select the best match even if below threshold
+                            var bestMatch = allSymbolMatches.OrderByDescending(m => m.confidence).First();
+                            detectedSymbols.Add(bestMatch);
                         }
 
                         // Update CSV with detected symbols
