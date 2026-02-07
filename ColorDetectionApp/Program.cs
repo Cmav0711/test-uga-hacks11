@@ -638,7 +638,7 @@ namespace ColorDetectionApp
                     {
                         Cv2.CvtColor(capturedImage, grayImage, ColorConversionCodes.BGRA2GRAY);
                         
-                        // Get all symbol templates from the symbols directory
+                        // Get all symbol folders from the symbols directory
                         string symbolsDir = "symbols";
                         if (!Directory.Exists(symbolsDir))
                         {
@@ -647,62 +647,83 @@ namespace ColorDetectionApp
                             return;
                         }
 
-                        var symbolFiles = Directory.GetFiles(symbolsDir, "*.png")
-                            .Concat(Directory.GetFiles(symbolsDir, "*.jpg"))
-                            .Concat(Directory.GetFiles(symbolsDir, "*.jpeg"))
-                            .Where(f => !f.EndsWith("README.md", StringComparison.OrdinalIgnoreCase))
-                            .ToList();
+                        // Get all subdirectories (each folder represents a symbol)
+                        var symbolFolders = Directory.GetDirectories(symbolsDir);
 
-                        if (symbolFiles.Count == 0)
+                        if (symbolFolders.Length == 0)
                         {
-                            Console.WriteLine("Info: No symbol templates found in symbols directory.");
+                            Console.WriteLine("Info: No symbol folders found in symbols directory.");
+                            Console.WriteLine("Please create folders for each symbol and add training images inside.");
                             return;
                         }
 
                         var allSymbolMatches = new List<(string symbolName, double confidence)>();
 
-                        // Match against each symbol template
-                        foreach (var symbolFile in symbolFiles)
+                        // Match against each symbol folder (train on multiple images per symbol)
+                        foreach (var symbolFolder in symbolFolders)
                         {
-                            string symbolName = Path.GetFileNameWithoutExtension(symbolFile);
+                            string symbolName = Path.GetFileName(symbolFolder);
                             
-                            using (var template = Cv2.ImRead(symbolFile, ImreadModes.Grayscale))
-                            {
-                                if (template.Empty())
-                                {
-                                    continue;
-                                }
+                            // Get all image files in this symbol's folder
+                            var trainingImages = Directory.GetFiles(symbolFolder, "*.png")
+                                .Concat(Directory.GetFiles(symbolFolder, "*.jpg"))
+                                .Concat(Directory.GetFiles(symbolFolder, "*.jpeg"))
+                                .Where(f => !f.EndsWith("README.md", StringComparison.OrdinalIgnoreCase))
+                                .ToList();
 
-                                // Perform template matching
-                                using (var result = new Mat())
+                            if (trainingImages.Count == 0)
+                            {
+                                Console.WriteLine($"Warning: No training images found in {symbolName} folder.");
+                                continue;
+                            }
+
+                            // Calculate average confidence across all training images for this symbol
+                            var confidenceScores = new List<double>();
+
+                            foreach (var trainingImage in trainingImages)
+                            {
+                                using (var template = Cv2.ImRead(trainingImage, ImreadModes.Grayscale))
                                 {
-                                    Cv2.MatchTemplate(grayImage, template, result, TemplateMatchModes.CCoeffNormed);
-                                    
-                                    // Find the best match
-                                    Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out _);
-                                    
-                                    // Store all matches for comparison
-                                    allSymbolMatches.Add((symbolName, maxVal));
+                                    if (template.Empty())
+                                    {
+                                        continue;
+                                    }
+
+                                    // Perform template matching
+                                    using (var result = new Mat())
+                                    {
+                                        Cv2.MatchTemplate(grayImage, template, result, TemplateMatchModes.CCoeffNormed);
+                                        
+                                        // Find the best match
+                                        Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out _);
+                                        
+                                        confidenceScores.Add(maxVal);
+                                    }
                                 }
+                            }
+
+                            // Use average confidence across all training images
+                            if (confidenceScores.Count > 0)
+                            {
+                                double avgConfidence = confidenceScores.Average();
+                                allSymbolMatches.Add((symbolName, avgConfidence));
+                                Console.WriteLine($"Symbol '{symbolName}': {confidenceScores.Count} training images, avg confidence: {avgConfidence:F3}");
                             }
                         }
 
-                        // Be very forgiving: use lenient threshold and always choose at least one symbol
+                        // Always select the symbol with highest average confidence
                         var detectedSymbols = new List<(string symbolName, double confidence)>();
-                        const double lenientThreshold = 0.3; // More forgiving threshold
                         
-                        // First, add all symbols above the lenient threshold
-                        var aboveThreshold = allSymbolMatches.Where(m => m.confidence >= lenientThreshold).ToList();
-                        
-                        if (aboveThreshold.Any())
+                        if (allSymbolMatches.Any())
                         {
-                            detectedSymbols.AddRange(aboveThreshold);
-                        }
-                        else if (allSymbolMatches.Any())
-                        {
-                            // Always choose at least one: select the best match even if below threshold
+                            // Select the symbol with the highest average confidence
                             var bestMatch = allSymbolMatches.OrderByDescending(m => m.confidence).First();
                             detectedSymbols.Add(bestMatch);
+                            Console.WriteLine($"Best match: {bestMatch.symbolName} with confidence {bestMatch.confidence:F3}");
+                        }
+                        else
+                        {
+                            Console.WriteLine("No valid symbol matches found.");
                         }
 
                         // Update CSV with detected symbols
