@@ -1113,7 +1113,7 @@ namespace ColorDetectionApp
             var regions = new List<BrightRegion>();
             var visited = new bool[image.Width, image.Height];
             int brightnessThreshold = 230; // Threshold for considering a pixel as "bright"
-            int maxSaturationForWhite = 80; // Maximum saturation for bright white lights (lower = more desaturated)
+            int maxSaturationForWhite = 80; // Maximum saturation for bright white lights (reduced from 100 for stricter detection)
 
             // Scan the image for bright pixels
             for (int y = 0; y < image.Height; y++)
