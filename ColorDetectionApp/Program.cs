@@ -26,6 +26,11 @@ namespace ColorDetectionApp
 
     class Program
     {
+        // Real-time detection constants
+        private const double MIN_REALTIME_CONFIDENCE = 0.40;  // Lower threshold for real-time feedback
+        private const double MIN_SAVED_CONFIDENCE = 0.60;     // Higher threshold for saved results
+        private const int MIN_POINTS_FOR_DETECTION = 10;       // Minimum tracked points before detection starts
+        private const double ASSUMED_CAMERA_FPS = 30.0;        // Assumed framerate for detection interval calculations
         // Key codes for F11 - can vary by platform
         private const int F11_KEY_CODE_PRIMARY = 65478;
         private const int F11_KEY_CODE_ALTERNATE = 65470;
@@ -219,6 +224,13 @@ namespace ColorDetectionApp
             // Camera flip state (adjustable via 'f' key)
             bool flipCamera = false;
             
+            // Real-time shape detection variables
+            bool realtimeDetectionEnabled = true;
+            int detectionFrameInterval = 15; // Detect every N frames (adjustable via 'd' and 'D' keys)
+            int frameCounter = 0;
+            string currentDetectedShape = "none";
+            double currentShapeConfidence = 0.0;
+            OpenCvSharp.Point[] currentShapeContour = Array.Empty<OpenCvSharp.Point>();
             // Fullscreen state (adjustable via F11 key)
             bool isFullscreen = false;
             
@@ -244,6 +256,8 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press 'o' to increase capture circle size, 'i' to decrease");
                 Console.WriteLine("Press 's' to take circular screenshot");
                 Console.WriteLine("Press 'x' to toggle outlier detection (currently: ON)");
+                Console.WriteLine("Press 'r' to toggle real-time shape detection (currently: ON)");
+                Console.WriteLine("Press 'd' to decrease detection interval (more frequent), 'D' to increase (less frequent)");
                 Console.WriteLine("Press 'f' to flip/mirror camera");
                 Console.WriteLine("Press 'F11' to toggle fullscreen mode");
                 
@@ -344,6 +358,41 @@ namespace ColorDetectionApp
                             // Clear all points after export
                             brightestPoints.Clear();
                             Console.WriteLine("All points cleared after export");
+                            
+                            // Reset detection state
+                            currentDetectedShape = "none";
+                            currentShapeConfidence = 0.0;
+                            currentShapeContour = Array.Empty<OpenCvSharp.Point>();
+                        }
+
+                        // Real-time shape detection (every N frames to avoid performance issues)
+                        frameCounter++;
+                        if (realtimeDetectionEnabled && 
+                            brightestPoints.Count >= MIN_POINTS_FOR_DETECTION && 
+                            frameCounter % detectionFrameInterval == 0)
+                        {
+                            try
+                            {
+                                // Create a temporary image from tracked points
+                                using var tempMat = CreateMatFromPoints(brightestPoints, 
+                                    (int)capture.FrameWidth, (int)capture.FrameHeight);
+                                
+                                // Detect shape from the current drawing
+                                var (shape, confidence, contour) = EnhancedShapeDetector.DetectShapeFromMat(tempMat);
+                                
+                                // Update current detection if confidence is reasonable
+                                if (confidence > MIN_REALTIME_CONFIDENCE)
+                                {
+                                    currentDetectedShape = shape;
+                                    currentShapeConfidence = confidence;
+                                    currentShapeContour = contour;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // Silently continue if detection fails
+                                Console.WriteLine($"Real-time detection error: {ex.Message}");
+                            }
                         }
 
                         // Draw lines connecting consecutive points
@@ -351,6 +400,14 @@ namespace ColorDetectionApp
                         {
                             Cv2.Line(frame, brightestPoints[i - 1], brightestPoints[i], 
                                     new Scalar(255, 128, 0), 2);
+                        }
+
+                        // Draw detected shape contour if available
+                        if (currentShapeContour.Length > 0 && brightestPoints.Count >= MIN_POINTS_FOR_DETECTION)
+                        {
+                            // Draw the detected contour in green
+                            Cv2.DrawContours(frame, new OpenCvSharp.Point[][] { currentShapeContour }, -1, 
+                                new Scalar(0, 255, 0), 2);
                         }
 
                         // Draw all historical points (smaller, cyan)
@@ -381,6 +438,20 @@ namespace ColorDetectionApp
                         }
                         Cv2.PutText(frame, info, new OpenCvSharp.Point(10, 30), 
                                    HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
+                        
+                        // Display real-time shape detection info
+                        if (realtimeDetectionEnabled && brightestPoints.Count >= MIN_POINTS_FOR_DETECTION)
+                        {
+                            string shapeInfo = $"Detected Shape: {currentDetectedShape.ToUpper()} (Confidence: {currentShapeConfidence:P0})";
+                            Cv2.PutText(frame, shapeInfo, new OpenCvSharp.Point(10, 60), 
+                                       HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 255, 0), 2);
+                        }
+                        else if (realtimeDetectionEnabled)
+                        {
+                            string shapeInfo = $"Draw more points for shape detection ({brightestPoints.Count}/{MIN_POINTS_FOR_DETECTION})";
+                            Cv2.PutText(frame, shapeInfo, new OpenCvSharp.Point(10, 60), 
+                                       HersheyFonts.HersheySimplex, 0.6, new Scalar(128, 128, 128), 1);
+                        }
                         
                         // Display capture circle radius
                         string captureInfo = $"Capture Circle Radius: {captureCircleRadius}px (press 's' to screenshot)";
@@ -470,6 +541,33 @@ namespace ColorDetectionApp
                             flipCamera = !flipCamera;
                             Console.WriteLine($"Camera flip {(flipCamera ? "enabled" : "disabled")} - image is {(flipCamera ? "mirrored" : "normal")}");
                         }
+                        else if (key == 'r' || key == 'R')
+                        {
+                            // Toggle real-time shape detection
+                            realtimeDetectionEnabled = !realtimeDetectionEnabled;
+                            Console.WriteLine($"Real-time shape detection: {(realtimeDetectionEnabled ? "ENABLED" : "DISABLED")}");
+                            if (!realtimeDetectionEnabled)
+                            {
+                                currentDetectedShape = "none";
+                                currentShapeConfidence = 0.0;
+                                currentShapeContour = Array.Empty<OpenCvSharp.Point>();
+                            }
+                        }
+                        else if (key == 'd' || key == 'D')
+                        {
+                            // Increase detection interval (less frequent detection)
+                            if (key == 'D')
+                            {
+                                detectionFrameInterval += 5;
+                                if (detectionFrameInterval > 60) detectionFrameInterval = 60;
+                            }
+                            else // 'd'
+                            {
+                                // Decrease detection interval (more frequent detection)
+                                detectionFrameInterval -= 5;
+                                if (detectionFrameInterval < 5) detectionFrameInterval = 5;
+                            }
+                            Console.WriteLine($"Detection frame interval: every {detectionFrameInterval} frames ({ASSUMED_CAMERA_FPS/detectionFrameInterval:F1} times per second)");
                         else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
                         {
                             // Toggle fullscreen mode
@@ -703,6 +801,32 @@ namespace ColorDetectionApp
                 // Save the image
                 image.Save(filename);
             }
+        }
+
+        /// <summary>
+        /// Creates a Mat image from tracked points for real-time shape detection.
+        /// </summary>
+        static Mat CreateMatFromPoints(List<OpenCvSharp.Point> points, int width, int height)
+        {
+            // Create a black canvas
+            var mat = new Mat(height, width, MatType.CV_8UC1, new Scalar(0));
+
+            if (points.Count > 1)
+            {
+                // Draw lines connecting consecutive points (white lines on black background)
+                for (int i = 1; i < points.Count; i++)
+                {
+                    Cv2.Line(mat, points[i - 1], points[i], new Scalar(255), 3);
+                }
+
+                // Draw all points as small circles
+                foreach (var point in points)
+                {
+                    Cv2.Circle(mat, point, 2, new Scalar(255), -1);
+                }
+            }
+
+            return mat;
         }
 
         static void ExportPointsToCsv(List<OpenCvSharp.Point> points, string filename)
@@ -950,8 +1074,8 @@ namespace ColorDetectionApp
                 
                 Console.WriteLine($"Enhanced detection: {shape} ({confidence:F3})");
                 
-                // If enhanced detection is confident (>60%), use it
-                if (confidence > 0.60)
+                // If enhanced detection is confident enough for saving (>60%), use it
+                if (confidence > MIN_SAVED_CONFIDENCE)
                 {
                     var detectedSymbols = new List<(string symbolName, double confidence)>
                     {
