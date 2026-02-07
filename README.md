@@ -1,12 +1,22 @@
 # test-uga-hacks11
 
-## Bright Light Color Detection Application with Enhanced Shape Recognition
+## Bright Light Color Detection Application with Real-Time Shape Recognition
 
-A C# application using OpenCV and SixLabors.ImageSharp that detects bright lights in real-time from a camera feed or processes static images. Now features **advanced shape detection** that is highly accurate with hand-drawn and messy shapes.
+A C# application using OpenCV and SixLabors.ImageSharp that detects bright lights in real-time from a camera feed or processes static images. Now features **real-time shape detection** that recognizes shapes AS YOU DRAW them with high accuracy on hand-drawn and messy shapes.
 
 ### Key Features
 
-- **🚀 Statistical Outlier Detection (NEW!)**: Automatic removal of extreme outliers from tracked points
+- **🎨 REAL-TIME Shape Detection (NEW!)**: See shapes recognized WHILE you draw them
+  - Live shape recognition in the camera feed as you draw
+  - Displays detected shape name and confidence in real-time
+  - Visual contour overlay showing detected shape boundaries
+  - Adjustable detection frequency (every N frames) for performance
+  - Toggle on/off with 'r' key
+  - Adjust detection speed with 'd' (faster) and 'D' (slower) keys
+  - Minimum 10 points required before detection starts
+  - Works seamlessly with existing tracking features
+
+- **🚀 Statistical Outlier Detection**: Automatic removal of extreme outliers from tracked points
   - Uses robust statistical methods (IQR and Modified Z-score with MAD)
   - Hybrid approach combining multiple algorithms for best results
   - Toggle on/off with 'x' key during tracking
@@ -27,6 +37,7 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
   - Works with messy, imperfect drawings
   - No training required - works immediately
   - Detects: circles, squares, triangles, stars, pentagons, hexagons, and more
+  - Now integrated into real-time camera loop for live feedback
   - See [ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md) for details
   
 - **Dual-Color Tracking Mode**: Choose two different colors to track with different export behaviors
@@ -84,7 +95,14 @@ At startup, you'll be prompted to select TWO colors for dual-color tracking:
 - **7. Magenta** - Tracks magenta lights only
 - **8. White** - Tracks white lights only
 
-After selecting both colors, the application will track lights and detect color switches:
+After selecting both colors, the application will track lights and detect shapes in real-time:
+- **REAL-TIME SHAPE DETECTION**: Shapes are detected AS YOU DRAW with live visual feedback
+  - Detected shape name and confidence displayed on screen
+  - Green contour overlay shows the detected shape boundary
+  - Press 'r' to toggle real-time detection on/off (default: ON)
+  - Press 'd' to detect MORE frequently (every 10 frames, faster updates)
+  - Press 'D' to detect LESS frequently (every 20 frames, better performance)
+  - Requires minimum 10 tracked points before detection starts
 - When switching from **primary to secondary**: Exports PNG + CSV
 - When switching from **secondary to primary**: Exports CSV only
 - The current brightest point is shown as a large green circle (if within tracking radius)
@@ -156,6 +174,7 @@ dotnet run --test-outlier-detection
 
 ### Documentation
 
+- **[REALTIME_SHAPE_DETECTION.md](REALTIME_SHAPE_DETECTION.md)** - ⭐ **NEW! Real-time shape detection guide** (learn how to use live shape recognition)
 - **[ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md)** - ⭐ **Comprehensive guide to enhanced shape detection** (recommended read)
 - **[ColorDetectionApp/CONTOUR_APPROXIMATION.md](ColorDetectionApp/CONTOUR_APPROXIMATION.md)** - ⭐ **Complete guide to contour approximation feature** (recommended for advanced shape analysis)
 - **[SHAPE_DETECTION_MODEL_RESEARCH.md](SHAPE_DETECTION_MODEL_RESEARCH.md)** - Research on various shape detection models and recommendations
@@ -168,6 +187,8 @@ dotnet run --test-outlier-detection
 
 #### Real-time Camera Mode
 - Displays live camera feed with overlay
+- **REAL-TIME SHAPE DETECTION**: Shows detected shape name and confidence as you draw
+- **Green contour overlay**: Visual boundary around detected shape
 - Current brightest point highlighted in green (if within tracking radius) or red (if filtered out)
 - Trail of all brightest points from previous frames in cyan
 - Orange lines connecting consecutive points
@@ -177,6 +198,7 @@ dotnet run --test-outlier-detection
 - Frame counter showing number of points tracked, current tracking radius, and no-light timeout
 - Calibration status indicator
 - Outlier detection status indicator (ON/OFF)
+- Real-time detection status (ON/OFF) and frequency
 - Automatic PNG export when light is not detected for the configured timeout
 - Outlier removal statistics displayed in console when exporting
 
