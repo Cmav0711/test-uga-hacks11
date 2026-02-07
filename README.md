@@ -2,7 +2,7 @@
 
 ## Bright Light Color Detection Application
 
-A C# OpenCV application that detects bright lights in images and creates image maps based on detected points.
+A C# application using SixLabors.ImageSharp that detects bright lights in images and creates image maps based on detected points.
 
 ### Features
 - Detects bright light sources using HSV color analysis
