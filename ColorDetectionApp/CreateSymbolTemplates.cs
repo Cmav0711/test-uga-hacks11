@@ -51,7 +51,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var circle = new SixLabors.ImageSharp.Drawing.EllipsePolygon(new PointF(50, 50), 40);
-                    ctx.Fill(Color.White, circle);
+                    ctx.Draw(Color.White, 2, circle);
                 });
                 image.Save(path);
             }
@@ -66,7 +66,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var circle = new SixLabors.ImageSharp.Drawing.EllipsePolygon(new PointF(50, 50), 40);
-                    ctx.Fill(Color.White, circle);
+                    ctx.Draw(Color.White, 2, circle);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "circle_1.png"));
             }
@@ -78,7 +78,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var circle = new SixLabors.ImageSharp.Drawing.EllipsePolygon(new PointF(50, 50), 30);
-                    ctx.Fill(Color.White, circle);
+                    ctx.Draw(Color.White, 2, circle);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "circle_2.png"));
             }
@@ -90,7 +90,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var circle = new SixLabors.ImageSharp.Drawing.EllipsePolygon(new PointF(50, 50), 45);
-                    ctx.Fill(Color.White, circle);
+                    ctx.Draw(Color.White, 2, circle);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "circle_3.png"));
             }
@@ -102,7 +102,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var circle = new SixLabors.ImageSharp.Drawing.EllipsePolygon(new PointF(45, 55), 38);
-                    ctx.Fill(Color.White, circle);
+                    ctx.Draw(Color.White, 2, circle);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "circle_4.png"));
             }
@@ -116,7 +116,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var square = new RectangleF(15, 15, 70, 70);
-                    ctx.Fill(Color.White, square);
+                    ctx.Draw(Color.White, 2, square);
                 });
                 image.Save(path);
             }
@@ -131,7 +131,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var square = new RectangleF(15, 15, 70, 70);
-                    ctx.Fill(Color.White, square);
+                    ctx.Draw(Color.White, 2, square);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "square_1.png"));
             }
@@ -143,7 +143,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var square = new RectangleF(25, 25, 50, 50);
-                    ctx.Fill(Color.White, square);
+                    ctx.Draw(Color.White, 2, square);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "square_2.png"));
             }
@@ -155,7 +155,7 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     var square = new RectangleF(10, 10, 80, 80);
-                    ctx.Fill(Color.White, square);
+                    ctx.Draw(Color.White, 2, square);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "square_3.png"));
             }
@@ -172,7 +172,7 @@ namespace ColorDetectionApp
                         new PointF(50, 90),
                         new PointF(10, 50)
                     ));
-                    ctx.Fill(Color.White, square);
+                    ctx.Draw(Color.White, 2, square);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "square_4.png"));
             }
@@ -190,7 +190,7 @@ namespace ColorDetectionApp
                         new PointF(90, 90),
                         new PointF(10, 90)
                     ));
-                    ctx.Fill(Color.White, triangle);
+                    ctx.Draw(Color.White, 2, triangle);
                 });
                 image.Save(path);
             }
@@ -209,7 +209,7 @@ namespace ColorDetectionApp
                         new PointF(90, 90),
                         new PointF(10, 90)
                     ));
-                    ctx.Fill(Color.White, triangle);
+                    ctx.Draw(Color.White, 2, triangle);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "triangle_1.png"));
             }
@@ -225,7 +225,7 @@ namespace ColorDetectionApp
                         new PointF(75, 75),
                         new PointF(25, 75)
                     ));
-                    ctx.Fill(Color.White, triangle);
+                    ctx.Draw(Color.White, 2, triangle);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "triangle_2.png"));
             }
@@ -241,7 +241,7 @@ namespace ColorDetectionApp
                         new PointF(90, 10),
                         new PointF(10, 10)
                     ));
-                    ctx.Fill(Color.White, triangle);
+                    ctx.Draw(Color.White, 2, triangle);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "triangle_3.png"));
             }
@@ -257,7 +257,7 @@ namespace ColorDetectionApp
                         new PointF(85, 85),
                         new PointF(15, 85)
                     ));
-                    ctx.Fill(Color.White, triangle);
+                    ctx.Draw(Color.White, 2, triangle);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "triangle_4.png"));
             }
@@ -285,7 +285,7 @@ namespace ColorDetectionApp
                         new PointF(39, 40)   // inner left top
                     };
                     var star = new Polygon(new LinearLineSegment(points));
-                    ctx.Fill(Color.White, star);
+                    ctx.Draw(Color.White, 2, star);
                 });
                 image.Save(path);
             }
@@ -313,7 +313,7 @@ namespace ColorDetectionApp
                         new PointF(39, 40)   // inner left top
                     };
                     var star = new Polygon(new LinearLineSegment(points));
-                    ctx.Fill(Color.White, star);
+                    ctx.Draw(Color.White, 2, star);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "star_1.png"));
             }
@@ -338,7 +338,7 @@ namespace ColorDetectionApp
                         new PointF(42, 43)
                     };
                     var star = new Polygon(new LinearLineSegment(points));
-                    ctx.Fill(Color.White, star);
+                    ctx.Draw(Color.White, 2, star);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "star_2.png"));
             }
@@ -363,7 +363,7 @@ namespace ColorDetectionApp
                         new PointF(38, 38)
                     };
                     var star = new Polygon(new LinearLineSegment(points));
-                    ctx.Fill(Color.White, star);
+                    ctx.Draw(Color.White, 2, star);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "star_3.png"));
             }
@@ -388,7 +388,7 @@ namespace ColorDetectionApp
                         new PointF(42, 42)
                     };
                     var star = new Polygon(new LinearLineSegment(points));
-                    ctx.Fill(Color.White, star);
+                    ctx.Draw(Color.White, 2, star);
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "star_4.png"));
             }
@@ -402,9 +402,9 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     // Vertical bar
-                    ctx.Fill(Color.White, new RectangleF(40, 10, 20, 80));
+                    ctx.Draw(Color.White, 2, new RectangleF(40, 10, 20, 80));
                     // Horizontal bar
-                    ctx.Fill(Color.White, new RectangleF(10, 40, 80, 20));
+                    ctx.Draw(Color.White, 2, new RectangleF(10, 40, 80, 20));
                 });
                 image.Save(path);
             }
@@ -419,9 +419,9 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     // Vertical bar
-                    ctx.Fill(Color.White, new RectangleF(40, 10, 20, 80));
+                    ctx.Draw(Color.White, 2, new RectangleF(40, 10, 20, 80));
                     // Horizontal bar
-                    ctx.Fill(Color.White, new RectangleF(10, 40, 80, 20));
+                    ctx.Draw(Color.White, 2, new RectangleF(10, 40, 80, 20));
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "cross_1.png"));
             }
@@ -433,9 +433,9 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     // Vertical bar
-                    ctx.Fill(Color.White, new RectangleF(35, 10, 30, 80));
+                    ctx.Draw(Color.White, 2, new RectangleF(35, 10, 30, 80));
                     // Horizontal bar
-                    ctx.Fill(Color.White, new RectangleF(10, 35, 80, 30));
+                    ctx.Draw(Color.White, 2, new RectangleF(10, 35, 80, 30));
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "cross_2.png"));
             }
@@ -447,9 +447,9 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     // Vertical bar
-                    ctx.Fill(Color.White, new RectangleF(45, 15, 10, 70));
+                    ctx.Draw(Color.White, 2, new RectangleF(45, 15, 10, 70));
                     // Horizontal bar
-                    ctx.Fill(Color.White, new RectangleF(15, 45, 70, 10));
+                    ctx.Draw(Color.White, 2, new RectangleF(15, 45, 70, 10));
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "cross_3.png"));
             }
@@ -461,9 +461,9 @@ namespace ColorDetectionApp
                 {
                     ctx.BackgroundColor(Color.Black);
                     // Vertical bar
-                    ctx.Fill(Color.White, new RectangleF(42, 20, 16, 60));
+                    ctx.Draw(Color.White, 2, new RectangleF(42, 20, 16, 60));
                     // Horizontal bar
-                    ctx.Fill(Color.White, new RectangleF(20, 42, 60, 16));
+                    ctx.Draw(Color.White, 2, new RectangleF(20, 42, 60, 16));
                 });
                 image.Save(System.IO.Path.Combine(folderPath, "cross_4.png"));
             }
