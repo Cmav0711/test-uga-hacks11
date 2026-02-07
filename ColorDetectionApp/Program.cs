@@ -42,6 +42,10 @@ namespace ColorDetectionApp
             // List to store all brightest points from previous frames
             var brightestPoints = new List<OpenCvSharp.Point>();
             
+            // Calibration data
+            Scalar? calibratedColor = null;
+            bool isCalibrated = false;
+            
             // Open the default camera
             using (var capture = new VideoCapture(0))
             {
@@ -57,9 +61,10 @@ namespace ColorDetectionApp
 
                 Console.WriteLine($"Camera opened successfully!");
                 Console.WriteLine($"Resolution: {capture.FrameWidth}x{capture.FrameHeight}");
+                Console.WriteLine("Press 'b' to calibrate with brightest point color");
 
                 using (var frame = new Mat())
-                using (var window = new Window("Brightest Point Tracker - Press 'q' to quit, 'c' to clear"))
+                using (var window = new Window("Brightest Point Tracker - Press 'q' to quit, 'c' to clear, 'b' to calibrate"))
                 {
                     while (true)
                     {
@@ -80,9 +85,33 @@ namespace ColorDetectionApp
                             // Add to our collection
                             brightestPoints.Add(brightestPoint.Value);
                             
+                            // Get the color at the brightest point
+                            var color = GetColorAtPoint(frame, brightestPoint.Value);
+                            
                             // Draw the current brightest point (large, bright green)
                             Cv2.Circle(frame, brightestPoint.Value, 8, new Scalar(0, 255, 0), -1);
                             Cv2.Circle(frame, brightestPoint.Value, 10, new Scalar(0, 255, 0), 2);
+                            
+                            // Display color information
+                            string colorInfo = $"Color: B={color.Val0:F0} G={color.Val1:F0} R={color.Val2:F0}";
+                            Cv2.PutText(frame, colorInfo, new OpenCvSharp.Point(10, 60), 
+                                       HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 255), 1);
+                            
+                            // If calibrated, show color difference
+                            if (isCalibrated && calibratedColor.HasValue)
+                            {
+                                double colorDiff = CalculateColorDifference(color, calibratedColor.Value);
+                                string diffInfo = $"Color Diff: {colorDiff:F1}";
+                                Cv2.PutText(frame, diffInfo, new OpenCvSharp.Point(10, 85), 
+                                           HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 255), 1);
+                            }
+                        }
+
+                        // Draw lines connecting consecutive points
+                        for (int i = 1; i < brightestPoints.Count; i++)
+                        {
+                            Cv2.Line(frame, brightestPoints[i - 1], brightestPoints[i], 
+                                    new Scalar(255, 128, 0), 2);
                         }
 
                         // Draw all historical points (smaller, cyan)
@@ -93,6 +122,10 @@ namespace ColorDetectionApp
 
                         // Display frame count and point count
                         string info = $"Points tracked: {brightestPoints.Count}";
+                        if (isCalibrated)
+                        {
+                            info += " [CALIBRATED]";
+                        }
                         Cv2.PutText(frame, info, new OpenCvSharp.Point(10, 30), 
                                    HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
 
@@ -109,6 +142,20 @@ namespace ColorDetectionApp
                         {
                             brightestPoints.Clear();
                             Console.WriteLine("Cleared all tracked points");
+                        }
+                        else if (key == 'b' || key == 'B')
+                        {
+                            // Calibration: capture the color of the brightest point
+                            if (brightestPoint.HasValue)
+                            {
+                                calibratedColor = GetColorAtPoint(frame, brightestPoint.Value);
+                                isCalibrated = true;
+                                Console.WriteLine($"Calibrated! Baseline color: B={calibratedColor.Value.Val0:F0} G={calibratedColor.Value.Val1:F0} R={calibratedColor.Value.Val2:F0}");
+                            }
+                            else
+                            {
+                                Console.WriteLine("No bright point found for calibration");
+                            }
                         }
                     }
                 }
@@ -138,6 +185,27 @@ namespace ColorDetectionApp
             }
             
             return null;
+        }
+
+        static Scalar GetColorAtPoint(Mat frame, OpenCvSharp.Point point)
+        {
+            // Ensure the point is within the frame bounds
+            if (point.X >= 0 && point.X < frame.Width && point.Y >= 0 && point.Y < frame.Height)
+            {
+                // Get the color value at the specified point (BGR format in OpenCV)
+                Vec3b color = frame.At<Vec3b>(point.Y, point.X);
+                return new Scalar(color.Item0, color.Item1, color.Item2);
+            }
+            return new Scalar(0, 0, 0);
+        }
+
+        static double CalculateColorDifference(Scalar color1, Scalar color2)
+        {
+            // Calculate Euclidean distance in BGR color space
+            double bDiff = color1.Val0 - color2.Val0;
+            double gDiff = color1.Val1 - color2.Val1;
+            double rDiff = color1.Val2 - color2.Val2;
+            return Math.Sqrt(bDiff * bDiff + gDiff * gDiff + rDiff * rDiff);
         }
 
         static void GenerateSampleImage(string outputPath)
@@ -185,9 +253,12 @@ namespace ColorDetectionApp
                 pointMap.Mutate(ctx => ctx.BackgroundColor(new Rgba32(0, 0, 0)));
 
                 int detectionCount = 0;
+                var centerPoints = new List<(int x, int y)>();
+                
                 foreach (var region in brightRegions)
                 {
                     detectionCount++;
+                    centerPoints.Add((region.CenterX, region.CenterY));
 
                     Console.WriteLine($"  Light #{detectionCount}:");
                     Console.WriteLine($"    Position: ({region.CenterX}, {region.CenterY})");
@@ -211,6 +282,30 @@ namespace ColorDetectionApp
                     {
                         var pointCircle = new RectangleF(region.CenterX - 10, region.CenterY - 10, 20, 20);
                         ctx.Fill(new Rgba32(0, 255, 255), pointCircle);
+                    });
+                }
+                
+                // Draw lines connecting consecutive points
+                if (centerPoints.Count > 1)
+                {
+                    outputMap.Mutate(ctx =>
+                    {
+                        for (int i = 1; i < centerPoints.Count; i++)
+                        {
+                            var p1 = new PointF(centerPoints[i - 1].x, centerPoints[i - 1].y);
+                            var p2 = new PointF(centerPoints[i].x, centerPoints[i].y);
+                            ctx.DrawLine(new Rgba32(0, 255, 0), 2, p1, p2);
+                        }
+                    });
+                    
+                    pointMap.Mutate(ctx =>
+                    {
+                        for (int i = 1; i < centerPoints.Count; i++)
+                        {
+                            var p1 = new PointF(centerPoints[i - 1].x, centerPoints[i - 1].y);
+                            var p2 = new PointF(centerPoints[i].x, centerPoints[i].y);
+                            ctx.DrawLine(new Rgba32(255, 255, 0), 2, p1, p2);
+                        }
                     });
                 }
 
