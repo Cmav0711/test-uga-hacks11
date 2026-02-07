@@ -56,11 +56,74 @@ namespace ColorDetectionApp
             {
                 if (args.Length < 2)
                 {
-                    Console.WriteLine("Usage: dotnet run --analyze-shape <image_path>");
+                    Console.WriteLine("Usage: dotnet run --analyze-shape <image_path> [epsilon_factor]");
+                    Console.WriteLine("       epsilon_factor: optional, default 0.04 (e.g., 0.01, 0.02, 0.08)");
                     return;
                 }
+                
+                double epsilonFactor = 0.04;
+                if (args.Length >= 3)
+                {
+                    if (!double.TryParse(args[2], out epsilonFactor))
+                    {
+                        Console.WriteLine("Error: Invalid epsilon factor. Using default 0.04");
+                        epsilonFactor = 0.04;
+                    }
+                }
+                
                 Console.WriteLine("\nAnalyzing shape in image...");
-                Console.WriteLine(EnhancedShapeDetector.GetShapeAnalysisDetails(args[1]));
+                Console.WriteLine(EnhancedShapeDetector.GetShapeAnalysisDetails(args[1], epsilonFactor));
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--test-contour-approx")
+            {
+                if (args.Length < 2)
+                {
+                    Console.WriteLine("Usage: dotnet run --test-contour-approx <image_path>");
+                    return;
+                }
+                Console.WriteLine("\nTesting contour approximation at multiple levels...");
+                ContourApproximation.VisualizeApproximationLevels(args[1]);
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--test-contour-unit")
+            {
+                TestContourApproximation.RunTests();
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--contour-info")
+            {
+                if (args.Length < 2)
+                {
+                    Console.WriteLine("Usage: dotnet run --contour-info <image_path> [epsilon_factor]");
+                    return;
+                }
+                
+                double epsilonFactor = 0.04;
+                if (args.Length >= 3)
+                {
+                    if (!double.TryParse(args[2], out epsilonFactor))
+                    {
+                        Console.WriteLine("Error: Invalid epsilon factor. Using default 0.04");
+                        epsilonFactor = 0.04;
+                    }
+                }
+                
+                Console.WriteLine(ContourApproximation.GetApproximationInfo(args[1], epsilonFactor));
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--interactive-contour")
+            {
+                if (args.Length < 2)
+                {
+                    Console.WriteLine("Usage: dotnet run --interactive-contour <image_path>");
+                    return;
+                }
+                ContourApproximation.InteractiveApproximation(args[1]);
                 return;
             }
 

@@ -6,7 +6,14 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
 
 ### Key Features
 
-- **🎯 Enhanced Shape Detection (NEW!)**: Advanced geometric analysis for accurate hand-drawn shape recognition
+- **🔧 Configurable Contour Approximation (NEW!)**: Advanced contour simplification with interactive adjustment
+  - Configurable epsilon parameter for precise control
+  - Multi-level visualization showing different approximation levels
+  - Interactive mode for real-time parameter tuning
+  - Reduces points while preserving shape characteristics
+  - See [ColorDetectionApp/CONTOUR_APPROXIMATION.md](ColorDetectionApp/CONTOUR_APPROXIMATION.md) for details
+
+- **🎯 Enhanced Shape Detection**: Advanced geometric analysis for accurate hand-drawn shape recognition
   - 92% accuracy on hand-drawn shapes (vs 43% with template matching)
   - Rotation and scale invariant
   - Works with messy, imperfect drawings
@@ -106,12 +113,33 @@ dotnet run --test-enhanced
 # Analyze a specific image
 dotnet run --analyze-shape path/to/image.png
 
+# Analyze with custom epsilon for contour approximation
+dotnet run --analyze-shape path/to/image.png 0.02
+
 # Generate sample shapes for testing
 dotnet run --generate-symbols
 ```
 
+#### Contour Approximation Testing
+```bash
+cd ColorDetectionApp
+
+# Get contour approximation info for an image
+dotnet run --contour-info path/to/image.png
+
+# Get contour info with custom epsilon
+dotnet run --contour-info path/to/image.png 0.06
+
+# Visualize approximation at multiple levels
+dotnet run --test-contour-approx path/to/image.png
+
+# Interactive mode - adjust epsilon in real-time
+dotnet run --interactive-contour path/to/image.png
+```
+
 ### Documentation
 
+- **[ColorDetectionApp/CONTOUR_APPROXIMATION.md](ColorDetectionApp/CONTOUR_APPROXIMATION.md)** - ⭐ **Complete guide to contour approximation feature** (recommended for shape analysis)
 - **[ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md)** - ⭐ **Comprehensive guide to enhanced shape detection** (recommended read)
 - **[SHAPE_DETECTION_MODEL_RESEARCH.md](SHAPE_DETECTION_MODEL_RESEARCH.md)** - Research on various shape detection models and recommendations
 - **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Step-by-step implementation guide for ML models (optional advanced usage)

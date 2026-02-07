@@ -16,7 +16,9 @@ namespace ColorDetectionApp
         /// This method is rotation-invariant, scale-invariant, and works well with
         /// hand-drawn or messy shapes.
         /// </summary>
-        public static (string shape, double confidence) DetectShape(string imagePath)
+        /// <param name="imagePath">Path to the image file</param>
+        /// <param name="epsilonFactor">Optional contour approximation epsilon factor (default: 0.04)</param>
+        public static (string shape, double confidence) DetectShape(string imagePath, double epsilonFactor = 0.04)
         {
             try
             {
@@ -51,8 +53,8 @@ namespace ColorDetectionApp
                     .OrderByDescending(c => Cv2.ContourArea(c))
                     .First();
 
-                // Analyze the shape
-                return AnalyzeContour(largestContour);
+                // Analyze the shape with custom epsilon factor
+                return AnalyzeContour(largestContour, epsilonFactor);
             }
             catch (Exception ex)
             {
@@ -61,7 +63,7 @@ namespace ColorDetectionApp
             }
         }
 
-        private static (string shape, double confidence) AnalyzeContour(Point[] contour)
+        private static (string shape, double confidence) AnalyzeContour(Point[] contour, double epsilonFactor = 0.04)
         {
             // Calculate basic properties
             var area = Cv2.ContourArea(contour);
@@ -73,8 +75,8 @@ namespace ColorDetectionApp
                 return ("too_small", 0.3);
             }
 
-            // Approximate the contour to a polygon
-            var epsilon = 0.04 * perimeter;
+            // Approximate the contour to a polygon with configurable epsilon
+            var epsilon = epsilonFactor * perimeter;
             var approx = Cv2.ApproxPolyDP(contour, epsilon, true);
             int vertices = approx.Length;
 
@@ -180,7 +182,11 @@ namespace ColorDetectionApp
         /// <summary>
         /// Detects multiple shapes in an image, useful when the image contains more than one shape.
         /// </summary>
-        public static List<(string shape, double confidence, Rect boundingBox)> DetectMultipleShapes(string imagePath)
+        /// <param name="imagePath">Path to the image file</param>
+        /// <param name="epsilonFactor">Optional contour approximation epsilon factor (default: 0.04)</param>
+        public static List<(string shape, double confidence, Rect boundingBox)> DetectMultipleShapes(
+            string imagePath, 
+            double epsilonFactor = 0.04)
         {
             var results = new List<(string shape, double confidence, Rect boundingBox)>();
 
@@ -212,7 +218,7 @@ namespace ColorDetectionApp
                     var area = Cv2.ContourArea(contour);
                     if (area < 100) continue; // Skip tiny contours
 
-                    var (shape, confidence) = AnalyzeContour(contour);
+                    var (shape, confidence) = AnalyzeContour(contour, epsilonFactor);
                     var boundingBox = Cv2.BoundingRect(contour);
 
                     results.Add((shape, confidence, boundingBox));
@@ -232,7 +238,9 @@ namespace ColorDetectionApp
         /// <summary>
         /// Provides detailed shape analysis information for debugging and validation.
         /// </summary>
-        public static string GetShapeAnalysisDetails(string imagePath)
+        /// <param name="imagePath">Path to the image file</param>
+        /// <param name="epsilonFactor">Optional contour approximation epsilon factor (default: 0.04)</param>
+        public static string GetShapeAnalysisDetails(string imagePath, double epsilonFactor = 0.04)
         {
             try
             {
@@ -264,7 +272,7 @@ namespace ColorDetectionApp
                 var perimeter = Cv2.ArcLength(largestContour, true);
                 var circularity = (4 * Math.PI * area) / (perimeter * perimeter);
                 
-                var epsilon = 0.04 * perimeter;
+                var epsilon = epsilonFactor * perimeter;
                 var approx = Cv2.ApproxPolyDP(largestContour, epsilon, true);
                 var vertices = approx.Length;
                 
@@ -275,12 +283,14 @@ namespace ColorDetectionApp
                 var convexArea = Cv2.ContourArea(convexHull);
                 var convexity = area / convexArea;
 
-                var (shape, confidence) = AnalyzeContour(largestContour);
+                var (shape, confidence) = AnalyzeContour(largestContour, epsilonFactor);
 
                 return $@"Shape Analysis Details:
 - Detected Shape: {shape}
 - Confidence: {confidence:F3}
 - Vertices: {vertices}
+- Epsilon Factor: {epsilonFactor:F3} ({epsilonFactor * 100:F1}%)
+- Epsilon Value: {epsilon:F2}
 - Area: {area:F1} pixels
 - Perimeter: {perimeter:F1} pixels
 - Circularity: {circularity:F3} (1.0 = perfect circle)
