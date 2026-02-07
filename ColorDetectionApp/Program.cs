@@ -568,6 +568,7 @@ namespace ColorDetectionApp
                                 if (detectionFrameInterval < 5) detectionFrameInterval = 5;
                             }
                             Console.WriteLine($"Detection frame interval: every {detectionFrameInterval} frames ({ASSUMED_CAMERA_FPS/detectionFrameInterval:F1} times per second)");
+                        }
                         else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
                         {
                             // Toggle fullscreen mode
@@ -595,8 +596,10 @@ namespace ColorDetectionApp
         {
             // Convert to grayscale for easier brightness analysis
             using (var gray = new Mat())
+            using (var hsvFrame = new Mat())
             {
                 Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
+                Cv2.CvtColor(frame, hsvFrame, ColorConversionCodes.BGR2HSV);
                 
                 Mat? mask = null;
                 try
@@ -609,15 +612,53 @@ namespace ColorDetectionApp
                         Cv2.Circle(mask, circleCenter.Value, circleRadius, new Scalar(255), -1);
                     }
                     
-                    // Find the location of the maximum brightness (within the mask if provided)
-                    double minVal, maxVal;
-                    OpenCvSharp.Point minLoc, maxLoc;
-                    Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc, mask);
-                    
-                    // Only return if brightness is above threshold (to avoid noise in dark scenes)
-                    if (maxVal >= 230)
+                    // Find all bright pixels (>= 230) within the search area
+                    using (var brightMask = new Mat())
                     {
-                        return maxLoc;
+                        Cv2.Threshold(gray, brightMask, 230, 255, ThresholdTypes.Binary);
+                        
+                        // Apply circular mask if provided
+                        if (mask != null)
+                        {
+                            Cv2.BitwiseAnd(brightMask, mask, brightMask);
+                        }
+                        
+                        // Find all bright points
+                        using (var points = new Mat())
+                        {
+                            Cv2.FindNonZero(brightMask, points);
+                            
+                            if (points.Empty())
+                                return null;
+                            
+                            OpenCvSharp.Point? bestPoint = null;
+                            double bestScore = -1;
+                            
+                            // Evaluate each bright point
+                            for (int i = 0; i < points.Rows; i++)
+                            {
+                                OpenCvSharp.Point pt = points.At<OpenCvSharp.Point>(i);
+                                
+                                // Get brightness at this point
+                                byte brightness = gray.At<byte>(pt.Y, pt.X);
+                                
+                                // Get color surround score (average saturation of surrounding pixels)
+                                double surroundScore = GetColorSurroundScore(hsvFrame, pt);
+                                
+                                // Combined score: brightness weighted with surround color
+                                // Higher surround score (more colorful neighbors) = better for RGB LEDs
+                                // Weight: 70% brightness, 30% surround color
+                                double totalScore = (brightness * 0.7) + (surroundScore * 0.3);
+                                
+                                if (totalScore > bestScore)
+                                {
+                                    bestScore = totalScore;
+                                    bestPoint = pt;
+                                }
+                            }
+                            
+                            return bestPoint;
+                        }
                     }
                 }
                 finally
@@ -625,8 +666,6 @@ namespace ColorDetectionApp
                     mask?.Dispose();
                 }
             }
-            
-            return null;
         }
 
         static OpenCvSharp.Point? FindBrightestPointWithColor(Mat frame, LightColor targetColor, OpenCvSharp.Point? circleCenter = null, int circleRadius = 0)
@@ -693,15 +732,59 @@ namespace ColorDetectionApp
                                     }
                                 }
                                 
-                                // Find the brightest point within the combined mask
-                                double minVal, maxVal;
-                                OpenCvSharp.Point minLoc, maxLoc;
-                                Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc, combinedMask);
-                                
-                                // Check if any pixel was found in the mask
-                                if (maxVal > 0)
+                                // Special handling for White color: prioritize pixels with colorful surroundings (RGB LEDs)
+                                if (targetColor == LightColor.White)
                                 {
-                                    return maxLoc;
+                                    // Find all candidate white points
+                                    using (var points = new Mat())
+                                    {
+                                        Cv2.FindNonZero(combinedMask, points);
+                                        
+                                        if (points.Empty())
+                                            return null;
+                                        
+                                        OpenCvSharp.Point? bestPoint = null;
+                                        double bestScore = -1;
+                                        
+                                        // Evaluate each candidate point
+                                        for (int i = 0; i < points.Rows; i++)
+                                        {
+                                            OpenCvSharp.Point pt = points.At<OpenCvSharp.Point>(i);
+                                            
+                                            // Get brightness at this point
+                                            byte brightness = gray.At<byte>(pt.Y, pt.X);
+                                            
+                                            // Get color surround score (average saturation of surrounding pixels)
+                                            double surroundScore = GetColorSurroundScore(hsvFrame, pt);
+                                            
+                                            // Combined score: brightness weighted with surround color
+                                            // Higher surround score (more colorful neighbors) = better for RGB LEDs
+                                            // Weight: 70% brightness, 30% surround color
+                                            double totalScore = (brightness * 0.7) + (surroundScore * 0.3);
+                                            
+                                            if (totalScore > bestScore)
+                                            {
+                                                bestScore = totalScore;
+                                                bestPoint = pt;
+                                            }
+                                        }
+                                        
+                                        return bestPoint;
+                                    }
+                                }
+                                else
+                                {
+                                    // For other colors, use standard brightest point detection
+                                    // Find the brightest point within the combined mask
+                                    double minVal, maxVal;
+                                    OpenCvSharp.Point minLoc, maxLoc;
+                                    Cv2.MinMaxLoc(gray, out minVal, out maxVal, out minLoc, out maxLoc, combinedMask);
+                                    
+                                    // Check if any pixel was found in the mask
+                                    if (maxVal > 0)
+                                    {
+                                        return maxLoc;
+                                    }
                                 }
                             }
                         }
@@ -732,6 +815,46 @@ namespace ColorDetectionApp
                 LightColor.White => (new Scalar(0, 0, 230), new Scalar(180, 30, 255)),      // White (low saturation, high value) - stricter
                 _ => (new Scalar(0, 0, 230), new Scalar(180, 255, 255))                     // Any bright (default) - stricter
             };
+        }
+
+        /// <summary>
+        /// Calculates a score based on the color saturation of surrounding pixels.
+        /// Higher scores indicate the point is surrounded by more colorful pixels (good for RGB LEDs).
+        /// </summary>
+        static double GetColorSurroundScore(Mat hsvFrame, OpenCvSharp.Point point, int radius = 3)
+        {
+            if (point.X < radius || point.Y < radius || 
+                point.X >= hsvFrame.Width - radius || point.Y >= hsvFrame.Height - radius)
+            {
+                return 0.0; // Can't check surroundings at image edges
+            }
+
+            double totalSaturation = 0.0;
+            int pixelCount = 0;
+
+            // Check pixels in a square around the center point
+            for (int dy = -radius; dy <= radius; dy++)
+            {
+                for (int dx = -radius; dx <= radius; dx++)
+                {
+                    // Skip the center pixel itself and only check a ring around it
+                    if (Math.Abs(dx) <= 1 && Math.Abs(dy) <= 1)
+                        continue;
+
+                    int x = point.X + dx;
+                    int y = point.Y + dy;
+
+                    // Get HSV values at this position
+                    Vec3b hsvPixel = hsvFrame.At<Vec3b>(y, x);
+                    double saturation = hsvPixel.Item1; // S channel in HSV
+
+                    totalSaturation += saturation;
+                    pixelCount++;
+                }
+            }
+
+            // Return average saturation of surrounding pixels
+            return pixelCount > 0 ? totalSaturation / pixelCount : 0.0;
         }
 
         static Scalar GetColorAtPoint(Mat frame, OpenCvSharp.Point point)
