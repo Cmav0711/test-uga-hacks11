@@ -31,6 +31,20 @@ namespace ColorDetectionApp
             Console.WriteLine("Bright Light Color Detection and Mapping");
             Console.WriteLine("========================================\n");
 
+            // Check for special commands
+            if (args.Length > 0 && args[0] == "--generate-symbols")
+            {
+                Console.WriteLine("Generating example symbol templates...");
+                SymbolTemplateGenerator.GenerateExampleTemplates();
+                return;
+            }
+
+            if (args.Length > 0 && args[0] == "--test-symbols")
+            {
+                SymbolDetectionTest.RunTest();
+                return;
+            }
+
             if (args.Length == 0)
             {
                 // Prompt user to select target light color
@@ -199,6 +213,10 @@ namespace ColorDetectionApp
                             ExportPointsToCsv(brightestPoints, csvFilename);
                             Console.WriteLine($"\nNo light detected for {noLightTimeout}s - Drawing exported to: {pngFilename}");
                             Console.WriteLine($"Points data exported to: {csvFilename}");
+                            
+                            // Perform symbol detection on the exported image
+                            DetectAndRecordSymbols(pngFilename);
+                            
                             imageExported = true;
                             
                             // Clear all points after export
@@ -596,6 +614,135 @@ namespace ColorDetectionApp
                     // Save the circular screenshot
                     image.Save(filename);
                 }
+            }
+            
+            // After saving, perform symbol detection
+            DetectAndRecordSymbols(filename);
+        }
+
+        public static void DetectAndRecordSymbols(string imageFilename)
+        {
+            try
+            {
+                // Load the captured image
+                using (var capturedImage = Cv2.ImRead(imageFilename, ImreadModes.Unchanged))
+                {
+                    if (capturedImage.Empty())
+                    {
+                        Console.WriteLine($"Warning: Could not load image for symbol detection: {imageFilename}");
+                        return;
+                    }
+
+                    // Convert to grayscale for template matching
+                    using (var grayImage = new Mat())
+                    {
+                        Cv2.CvtColor(capturedImage, grayImage, ColorConversionCodes.BGRA2GRAY);
+                        
+                        // Get all symbol templates from the symbols directory
+                        string symbolsDir = "symbols";
+                        if (!Directory.Exists(symbolsDir))
+                        {
+                            Console.WriteLine("Info: Symbols directory not found. Creating it...");
+                            Directory.CreateDirectory(symbolsDir);
+                            return;
+                        }
+
+                        var symbolFiles = Directory.GetFiles(symbolsDir, "*.png")
+                            .Concat(Directory.GetFiles(symbolsDir, "*.jpg"))
+                            .Concat(Directory.GetFiles(symbolsDir, "*.jpeg"))
+                            .Where(f => !f.EndsWith("README.md", StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+
+                        if (symbolFiles.Count == 0)
+                        {
+                            Console.WriteLine("Info: No symbol templates found in symbols directory.");
+                            return;
+                        }
+
+                        var detectedSymbols = new List<(string symbolName, double confidence)>();
+
+                        // Match against each symbol template
+                        foreach (var symbolFile in symbolFiles)
+                        {
+                            string symbolName = Path.GetFileNameWithoutExtension(symbolFile);
+                            
+                            using (var template = Cv2.ImRead(symbolFile, ImreadModes.Grayscale))
+                            {
+                                if (template.Empty())
+                                {
+                                    continue;
+                                }
+
+                                // Perform template matching
+                                using (var result = new Mat())
+                                {
+                                    Cv2.MatchTemplate(grayImage, template, result, TemplateMatchModes.CCoeffNormed);
+                                    
+                                    // Find the best match
+                                    Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out _);
+                                    
+                                    // Consider it a match if confidence is above threshold (0.7)
+                                    if (maxVal >= 0.7)
+                                    {
+                                        detectedSymbols.Add((symbolName, maxVal));
+                                    }
+                                }
+                            }
+                        }
+
+                        // Update CSV with detected symbols
+                        UpdateSymbolsCsv(imageFilename, detectedSymbols);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during symbol detection: {ex.Message}");
+            }
+        }
+
+        static void UpdateSymbolsCsv(string imageFilename, List<(string symbolName, double confidence)> detectedSymbols)
+        {
+            string csvFilename = "detected_symbols.csv";
+            bool fileExists = File.Exists(csvFilename);
+            
+            try
+            {
+                using (var writer = new StreamWriter(csvFilename, append: true))
+                {
+                    // Write header if file doesn't exist
+                    if (!fileExists)
+                    {
+                        writer.WriteLine("Timestamp,ImageFilename,DetectedSymbols,Confidence,Count");
+                    }
+                    
+                    // Prepare the CSV row
+                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    string symbolsList = detectedSymbols.Count > 0 
+                        ? string.Join(";", detectedSymbols.Select(s => s.symbolName))
+                        : "None";
+                    string confidenceList = detectedSymbols.Count > 0
+                        ? string.Join(";", detectedSymbols.Select(s => s.confidence.ToString("F3")))
+                        : "N/A";
+                    int count = detectedSymbols.Count;
+                    
+                    // Write the data
+                    writer.WriteLine($"{timestamp},{imageFilename},{symbolsList},{confidenceList},{count}");
+                }
+                
+                if (detectedSymbols.Count > 0)
+                {
+                    Console.WriteLine($"Detected {detectedSymbols.Count} symbol(s): {string.Join(", ", detectedSymbols.Select(s => $"{s.symbolName} ({s.confidence:F2})"))}");
+                }
+                else
+                {
+                    Console.WriteLine("No symbols detected in the image.");
+                }
+                Console.WriteLine($"Symbol detection results saved to: {csvFilename}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error updating symbols CSV: {ex.Message}");
             }
         }
 
