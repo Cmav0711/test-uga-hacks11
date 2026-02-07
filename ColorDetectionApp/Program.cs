@@ -42,9 +42,8 @@ namespace ColorDetectionApp
             // List to store all brightest points from previous frames
             var brightestPoints = new List<OpenCvSharp.Point>();
             
-            // Calibration data
+            // Calibration data - stores baseline color for comparison
             Scalar? calibratedColor = null;
-            bool isCalibrated = false;
             
             // Open the default camera
             using (var capture = new VideoCapture(0))
@@ -98,7 +97,7 @@ namespace ColorDetectionApp
                                        HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 255), 1);
                             
                             // If calibrated, show color difference
-                            if (isCalibrated && calibratedColor.HasValue)
+                            if (calibratedColor.HasValue)
                             {
                                 double colorDiff = CalculateColorDifference(color, calibratedColor.Value);
                                 string diffInfo = $"Color Diff: {colorDiff:F1}";
@@ -122,7 +121,7 @@ namespace ColorDetectionApp
 
                         // Display frame count and point count
                         string info = $"Points tracked: {brightestPoints.Count}";
-                        if (isCalibrated)
+                        if (calibratedColor.HasValue)
                         {
                             info += " [CALIBRATED]";
                         }
@@ -149,7 +148,6 @@ namespace ColorDetectionApp
                             if (brightestPoint.HasValue)
                             {
                                 calibratedColor = GetColorAtPoint(frame, brightestPoint.Value);
-                                isCalibrated = true;
                                 Console.WriteLine($"Calibrated! Baseline color: B={calibratedColor.Value.Val0:F0} G={calibratedColor.Value.Val1:F0} R={calibratedColor.Value.Val2:F0}");
                             }
                             else
@@ -193,6 +191,7 @@ namespace ColorDetectionApp
             if (point.X >= 0 && point.X < frame.Width && point.Y >= 0 && point.Y < frame.Height)
             {
                 // Get the color value at the specified point (BGR format in OpenCV)
+                // Note: OpenCV uses row-major indexing (row, column) so Y comes before X
                 Vec3b color = frame.At<Vec3b>(point.Y, point.X);
                 return new Scalar(color.Item0, color.Item1, color.Item2);
             }
@@ -202,6 +201,8 @@ namespace ColorDetectionApp
         static double CalculateColorDifference(Scalar color1, Scalar color2)
         {
             // Calculate Euclidean distance in BGR color space
+            // Note: BGR color space is not perceptually uniform. For better results matching
+            // human perception, consider using CIE Lab or CIE Delta E color spaces.
             double bDiff = color1.Val0 - color2.Val0;
             double gDiff = color1.Val1 - color2.Val1;
             double rDiff = color1.Val2 - color2.Val2;
