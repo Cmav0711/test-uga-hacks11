@@ -6,7 +6,13 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
 
 ### Key Features
 
-- **🎨 REAL-TIME Shape Detection (NEW!)**: See shapes recognized WHILE you draw them
+- **💡 Enhanced RGB LED Detection (NEW!)**: Improved detection for RGB 5mm LEDs
+  - Prioritizes bright white centers surrounded by colored hues
+  - Better distinguishes RGB LEDs from plain white light sources
+  - Uses color saturation analysis of surrounding pixels
+  - See [RGB_LED_DETECTION_ENHANCEMENT.md](RGB_LED_DETECTION_ENHANCEMENT.md) for details
+
+- **🎨 REAL-TIME Shape Detection**: See shapes recognized WHILE you draw them
   - Live shape recognition in the camera feed as you draw
   - Displays detected shape name and confidence in real-time
   - Visual contour overlay showing detected shape boundaries
@@ -175,9 +181,10 @@ dotnet run --test-outlier-detection
 
 ### Documentation
 
-- **[REALTIME_SHAPE_DETECTION.md](REALTIME_SHAPE_DETECTION.md)** - ⭐ **NEW! Real-time shape detection guide** (learn how to use live shape recognition)
-- **[ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md)** - ⭐ **Comprehensive guide to enhanced shape detection** (recommended read)
-- **[ColorDetectionApp/CONTOUR_APPROXIMATION.md](ColorDetectionApp/CONTOUR_APPROXIMATION.md)** - ⭐ **Complete guide to contour approximation feature** (recommended for advanced shape analysis)
+- **[RGB_LED_DETECTION_ENHANCEMENT.md](RGB_LED_DETECTION_ENHANCEMENT.md)** - ⭐ **NEW! Enhanced RGB LED detection guide** (learn about improved white light detection)
+- **[REALTIME_SHAPE_DETECTION.md](REALTIME_SHAPE_DETECTION.md)** - ⭐ Real-time shape detection guide (learn how to use live shape recognition)
+- **[ENHANCED_SHAPE_DETECTION.md](ENHANCED_SHAPE_DETECTION.md)** - ⭐ Comprehensive guide to enhanced shape detection (recommended read)
+- **[ColorDetectionApp/CONTOUR_APPROXIMATION.md](ColorDetectionApp/CONTOUR_APPROXIMATION.md)** - ⭐ Complete guide to contour approximation feature (recommended for advanced shape analysis)
 - **[SHAPE_DETECTION_MODEL_RESEARCH.md](SHAPE_DETECTION_MODEL_RESEARCH.md)** - Research on various shape detection models and recommendations
 - **[IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md)** - Step-by-step implementation guide for ML models (optional advanced usage)
 - [ColorDetectionApp/README.md](ColorDetectionApp/README.md) - Detailed usage instructions and technical documentation
