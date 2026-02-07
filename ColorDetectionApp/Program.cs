@@ -500,17 +500,24 @@ namespace ColorDetectionApp
 
         static void ExportPointsToCsv(List<OpenCvSharp.Point> points, string filename)
         {
-            // Create CSV file with point data
-            using (var writer = new StreamWriter(filename))
+            try
             {
-                // Write header
-                writer.WriteLine("Index,X,Y");
-                
-                // Write each point
-                for (int i = 0; i < points.Count; i++)
+                // Create CSV file with point data using UTF-8 encoding
+                using (var writer = new StreamWriter(filename, false, System.Text.Encoding.UTF8))
                 {
-                    writer.WriteLine($"{i},{points[i].X},{points[i].Y}");
+                    // Write header
+                    writer.WriteLine("Index,X,Y");
+                    
+                    // Write each point
+                    for (int i = 0; i < points.Count; i++)
+                    {
+                        writer.WriteLine($"{i},{points[i].X},{points[i].Y}");
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error exporting CSV: {ex.Message}");
             }
         }
 
