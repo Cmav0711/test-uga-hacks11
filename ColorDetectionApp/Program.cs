@@ -738,7 +738,7 @@ namespace ColorDetectionApp
             return color switch
             {
                 // Red is handled separately in FindBrightestPointWithColor due to hue wraparound
-                LightColor.Green => (new Scalar(40, 80, 150), new Scalar(80, 255, 255)),    // Green - stricter
+                LightColor.Green => (new Scalar(50, 50, 50), new Scalar(80, 255, 255)),    // Green - stricter
                 LightColor.Blue => (new Scalar(100, 80, 150), new Scalar(130, 255, 255)),   // Blue - stricter
                 LightColor.Yellow => (new Scalar(20, 100, 180), new Scalar(40, 255, 255)),  // Yellow - stricter
                 LightColor.Cyan => (new Scalar(80, 80, 150), new Scalar(100, 255, 255)),    // Cyan - stricter
