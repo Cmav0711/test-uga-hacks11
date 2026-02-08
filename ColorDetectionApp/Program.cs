@@ -592,18 +592,9 @@ namespace ColorDetectionApp
                             lineDrawingEnabled = !lineDrawingEnabled;
                             Console.WriteLine($"Line drawing: {(lineDrawingEnabled ? "ENABLED" : "DISABLED")}");
                             
-                            // Toggle timeout between 0.0 and saved value (default 3.0)
-                            if (noLightTimeout > 0.0)
-                            {
-                                savedTimeout = noLightTimeout; // Save current timeout
-                                noLightTimeout = 0.0;
-                                Console.WriteLine($"No-light timeout set to 0.0s (instant export)");
-                            }
-                            else
-                            {
-                                noLightTimeout = savedTimeout; // Restore saved timeout
-                                Console.WriteLine($"No-light timeout restored to {noLightTimeout:F1}s");
-                            }
+                            // Activate instant export effect by setting timeout to 0.0
+                            noLightTimeout = 0.0;
+                            Console.WriteLine($"No-light timeout set to 0.0s (instant export activated)");
                         }
                         else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
                         {
