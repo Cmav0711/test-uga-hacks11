@@ -2,11 +2,19 @@
 
 ## Bright Light Color Detection Application with Real-Time Shape Recognition
 
-A C# application using OpenCV and SixLabors.ImageSharp that detects bright lights in real-time from a camera feed or processes static images. Now features **real-time shape detection** that recognizes shapes AS YOU DRAW them with high accuracy on hand-drawn and messy shapes.
+A C# application using OpenCV and SixLabors.ImageSharp that detects bright lights in real-time from a camera feed or processes static images. Now features **real-time shape detection** that recognizes shapes AS YOU DRAW them with high accuracy on hand-drawn and messy shapes, plus **dual-mode tracking** for flexible drawing and cursor operations.
 
 ### Key Features
 
-- **🎨 REAL-TIME Shape Detection (NEW!)**: See shapes recognized WHILE you draw them
+- **✨ Dual Tracking Modes (NEW!)**: Switch between Drawing and Cursor modes for different workflows
+  - **Drawing Mode**: Full drawing capabilities with lines, shape detection, and PNG+CSV export
+  - **Cursor Mode**: Lightweight coordinate-only tracking with CSV export
+  - Press 'm' to toggle between modes
+  - When switching from Drawing → Cursor: Saves PNG + CSV of your drawing
+  - When switching from Cursor → Drawing: Saves CSV of cursor positions only
+  - Mode displayed in status bar for easy reference
+
+- **🎨 REAL-TIME Shape Detection**: See shapes recognized WHILE you draw them
   - Live shape recognition in the camera feed as you draw
   - Displays detected shape name and confidence in real-time
   - Visual contour overlay showing detected shape boundaries
@@ -15,6 +23,7 @@ A C# application using OpenCV and SixLabors.ImageSharp that detects bright light
   - Adjust detection speed with 'd' (faster) and 'D' (slower) keys
   - Minimum 10 points required before detection starts
   - Works seamlessly with existing tracking features
+  - **Only active in Drawing mode**
 
 - **🚀 Statistical Outlier Detection**: Automatic removal of extreme outliers from tracked points
   - Uses robust statistical methods (IQR and Modified Z-score with MAD)
@@ -96,7 +105,14 @@ At startup, you'll be prompted to select TWO colors for dual-color tracking:
 - **8. White** - Tracks white lights only
 
 After selecting both colors, the application will track lights and detect shapes in real-time:
-- **REAL-TIME SHAPE DETECTION**: Shapes are detected AS YOU DRAW with live visual feedback
+- **DUAL TRACKING MODES**: Switch between Drawing and Cursor modes
+  - **Drawing Mode** (default): Full features with line drawing and shape detection
+  - **Cursor Mode**: Only tracks coordinates without drawing lines
+  - Press 'm' to toggle between modes
+  - Switching Drawing → Cursor: Exports PNG + CSV
+  - Switching Cursor → Drawing: Exports CSV only
+  - Current mode displayed in the status bar
+- **REAL-TIME SHAPE DETECTION** (Drawing mode only): Shapes are detected AS YOU DRAW with live visual feedback
   - Detected shape name and confidence displayed on screen
   - Green contour overlay shows the detected shape boundary
   - Press 'r' to toggle real-time detection on/off (default: ON)
@@ -107,7 +123,7 @@ After selecting both colors, the application will track lights and detect shapes
 - When switching from **secondary to primary**: Exports CSV only
 - The current brightest point is shown as a large green circle (if within tracking radius)
 - All previously tracked points are shown as smaller cyan dots
-- Orange lines connect consecutive points to show the path
+- Orange lines connect consecutive points to show the path (Drawing mode only)
 - A purple circle shows the tracking radius around the last tracked point
 - A cyan circle in the center shows the circular screenshot capture region
 - RGB color values and active color are displayed on screen
@@ -188,11 +204,12 @@ dotnet run --test-outlier-detection
 
 #### Real-time Camera Mode
 - Displays live camera feed with overlay
-- **REAL-TIME SHAPE DETECTION**: Shows detected shape name and confidence as you draw
-- **Green contour overlay**: Visual boundary around detected shape
+- **MODE INDICATOR**: Shows current mode (DRAWING or CURSOR) in status bar
+- **REAL-TIME SHAPE DETECTION** (Drawing mode only): Shows detected shape name and confidence as you draw
+- **Green contour overlay** (Drawing mode only): Visual boundary around detected shape
 - Current brightest point highlighted in green (if within tracking radius) or red (if filtered out)
 - Trail of all brightest points from previous frames in cyan
-- Orange lines connecting consecutive points
+- Orange lines connecting consecutive points (Drawing mode only)
 - Purple circle showing the tracking radius around the last tracked point
 - RGB color information displayed on screen
 - Color difference from baseline (when calibrated)

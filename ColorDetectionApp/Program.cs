@@ -24,6 +24,13 @@ namespace ColorDetectionApp
         White
     }
 
+    // Enum for tracking modes
+    enum TrackingMode
+    {
+        Drawing,  // Drawing mode - draws lines and shapes
+        Cursor    // Cursor mode - only tracks coordinates
+    }
+
     class Program
     {
         // Real-time detection constants
@@ -245,6 +252,9 @@ namespace ColorDetectionApp
             // Track whether line drawing is enabled (toggle with 'a' key)
             bool lineDrawingEnabled = false;
             
+            // Current tracking mode (toggle with 'm' key)
+            TrackingMode currentMode = TrackingMode.Drawing;
+            
             // Open the default camera
             using (var capture = new VideoCapture(0))
             {
@@ -270,6 +280,7 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press 'r' to toggle real-time shape detection (currently: ON)");
                 Console.WriteLine("Press 'd' to decrease detection interval (more frequent), 'D' to increase (less frequent)");
                 Console.WriteLine("Press 'a' to toggle line drawing on/off");
+                Console.WriteLine("Press 'm' to toggle between Drawing and Cursor modes");
                 Console.WriteLine("Press 'f' to flip/mirror camera");
                 Console.WriteLine("Press 'F11' to toggle fullscreen mode");
                 
@@ -342,16 +353,7 @@ namespace ColorDetectionApp
                             (DateTime.Now - lastLightDetectedTime.Value).TotalSeconds >= noLightTimeout)
                         {
                             // Apply outlier detection if enabled
-                            var pointsToExport = brightestPoints;
-                            if (outlierDetectionEnabled && brightestPoints.Count >= 4)
-                            {
-                                var originalCount = brightestPoints.Count;
-                                pointsToExport = OutlierDetection.RemoveOutliersHybrid(brightestPoints);
-                                if (pointsToExport.Count < originalCount)
-                                {
-                                    Console.WriteLine($"\nOutlier detection: Removed {originalCount - pointsToExport.Count} outlier(s) from {originalCount} points");
-                                }
-                            }
+                            var pointsToExport = ApplyOutlierDetectionIfEnabled(brightestPoints, outlierDetectionEnabled);
                             
                             // Export the drawing to PNG and CSV
                             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -378,8 +380,10 @@ namespace ColorDetectionApp
                         }
 
                         // Real-time shape detection (every N frames to avoid performance issues)
+                        // Only detect shapes in Drawing mode
                         frameCounter++;
-                        if (realtimeDetectionEnabled && 
+                        if (currentMode == TrackingMode.Drawing && 
+                            realtimeDetectionEnabled && 
                             brightestPoints.Count >= MIN_POINTS_FOR_DETECTION && 
                             frameCounter % detectionFrameInterval == 0)
                         {
@@ -407,8 +411,8 @@ namespace ColorDetectionApp
                             }
                         }
 
-                        // Draw lines connecting consecutive points (only when line drawing is enabled)
-                        if (lineDrawingEnabled)
+                        // Draw lines connecting consecutive points (only in Drawing mode)
+                        if (currentMode == TrackingMode.Drawing)
                         {
                             for (int i = 1; i < brightestPoints.Count; i++)
                             {
@@ -417,8 +421,10 @@ namespace ColorDetectionApp
                             }
                         }
 
-                        // Draw detected shape contour if available
-                        if (currentShapeContour.Length > 0 && brightestPoints.Count >= MIN_POINTS_FOR_DETECTION)
+                        // Draw detected shape contour if available (only in Drawing mode)
+                        if (currentMode == TrackingMode.Drawing && 
+                            currentShapeContour.Length > 0 && 
+                            brightestPoints.Count >= MIN_POINTS_FOR_DETECTION)
                         {
                             // Draw the detected contour in green
                             Cv2.DrawContours(frame, new OpenCvSharp.Point[][] { currentShapeContour }, -1, 
@@ -442,7 +448,7 @@ namespace ColorDetectionApp
                         Cv2.Circle(frame, centerPoint, captureCircleRadius, new Scalar(0, 255, 255), 3); // Cyan circle
 
                         // Display frame count and point count
-                        string info = $"Points tracked: {brightestPoints.Count} | Tracking radius: {trackingRadius}px | Timeout: {noLightTimeout:F1}s";
+                        string info = $"Mode: {currentMode.ToString().ToUpper()} | Points: {brightestPoints.Count} | Radius: {trackingRadius}px | Timeout: {noLightTimeout:F1}s";
                         if (calibratedColor.HasValue)
                         {
                             info += " [CALIBRATED]";
@@ -454,14 +460,14 @@ namespace ColorDetectionApp
                         Cv2.PutText(frame, info, new OpenCvSharp.Point(10, 30), 
                                    HersheyFonts.HersheySimplex, 0.7, new Scalar(255, 255, 255), 2);
                         
-                        // Display real-time shape detection info
-                        if (realtimeDetectionEnabled && brightestPoints.Count >= MIN_POINTS_FOR_DETECTION)
+                        // Display real-time shape detection info (only in Drawing mode)
+                        if (currentMode == TrackingMode.Drawing && realtimeDetectionEnabled && brightestPoints.Count >= MIN_POINTS_FOR_DETECTION)
                         {
                             string shapeInfo = $"Detected Shape: {currentDetectedShape.ToUpper()} (Confidence: {currentShapeConfidence:P0})";
                             Cv2.PutText(frame, shapeInfo, new OpenCvSharp.Point(10, 60), 
                                        HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 255, 0), 2);
                         }
-                        else if (realtimeDetectionEnabled)
+                        else if (currentMode == TrackingMode.Drawing && realtimeDetectionEnabled)
                         {
                             string shapeInfo = $"Draw more points for shape detection ({brightestPoints.Count}/{MIN_POINTS_FOR_DETECTION})";
                             Cv2.PutText(frame, shapeInfo, new OpenCvSharp.Point(10, 60), 
@@ -595,6 +601,60 @@ namespace ColorDetectionApp
                             // Activate instant export effect by setting timeout to 0.0
                             noLightTimeout = 0.0;
                             Console.WriteLine($"No-light timeout set to 0.0s (instant export activated)");
+                        }
+                        else if (key == 'm' || key == 'M')
+                        {
+                            // Toggle between Drawing and Cursor modes
+                            TrackingMode previousMode = currentMode;
+                            currentMode = (currentMode == TrackingMode.Drawing) ? TrackingMode.Cursor : TrackingMode.Drawing;
+                            
+                            Console.WriteLine($"\nMode switched from {previousMode} to {currentMode}");
+                            
+                            // When switching FROM Drawing TO Cursor mode, export PNG + CSV
+                            if (previousMode == TrackingMode.Drawing && currentMode == TrackingMode.Cursor && brightestPoints.Count > 0)
+                            {
+                                // Apply outlier detection if enabled
+                                var pointsToExport = ApplyOutlierDetectionIfEnabled(brightestPoints, outlierDetectionEnabled);
+                                
+                                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                                string pngFilename = $"drawing_mode_{timestamp}.png";
+                                string csvFilename = $"drawing_mode_{timestamp}.csv";
+                                
+                                ExportDrawingToPng(pointsToExport, (int)capture.FrameWidth, (int)capture.FrameHeight, pngFilename);
+                                ExportPointsToCsv(pointsToExport, csvFilename);
+                                
+                                Console.WriteLine($"Drawing mode export: PNG saved to {pngFilename}");
+                                Console.WriteLine($"Drawing mode export: CSV saved to {csvFilename}");
+                                
+                                // Perform symbol detection on the exported image
+                                DetectAndRecordSymbolsEnhanced(pngFilename);
+                                
+                                // Clear points after mode switch
+                                brightestPoints.Clear();
+                                Console.WriteLine("Points cleared after mode switch");
+                                
+                                // Reset detection state
+                                currentDetectedShape = "none";
+                                currentShapeConfidence = 0.0;
+                                currentShapeContour = Array.Empty<OpenCvSharp.Point>();
+                            }
+                            // When switching FROM Cursor TO Drawing mode, only export CSV
+                            else if (previousMode == TrackingMode.Cursor && currentMode == TrackingMode.Drawing && brightestPoints.Count > 0)
+                            {
+                                // Apply outlier detection if enabled
+                                var pointsToExport = ApplyOutlierDetectionIfEnabled(brightestPoints, outlierDetectionEnabled);
+                                
+                                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                                string csvFilename = $"cursor_mode_{timestamp}.csv";
+                                
+                                ExportPointsToCsv(pointsToExport, csvFilename);
+                                
+                                Console.WriteLine($"Cursor mode export: CSV saved to {csvFilename}");
+                                
+                                // Clear points after mode switch
+                                brightestPoints.Clear();
+                                Console.WriteLine("Points cleared after mode switch");
+                            }
                         }
                         else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
                         {
@@ -855,6 +915,25 @@ namespace ColorDetectionApp
             }
 
             return mat;
+        }
+
+        /// <summary>
+        /// Applies outlier detection to a list of points if enabled.
+        /// Returns the filtered list of points and logs statistics if outliers were removed.
+        /// </summary>
+        static List<OpenCvSharp.Point> ApplyOutlierDetectionIfEnabled(List<OpenCvSharp.Point> points, bool outlierDetectionEnabled)
+        {
+            if (outlierDetectionEnabled && points.Count >= 4)
+            {
+                var originalCount = points.Count;
+                var filteredPoints = OutlierDetection.RemoveOutliersHybrid(points);
+                if (filteredPoints.Count < originalCount)
+                {
+                    Console.WriteLine($"Outlier detection: Removed {originalCount - filteredPoints.Count} outlier(s) from {originalCount} points");
+                }
+                return filteredPoints;
+            }
+            return points;
         }
 
         static void ExportPointsToCsv(List<OpenCvSharp.Point> points, string filename)
