@@ -234,6 +234,9 @@ namespace ColorDetectionApp
             // Fullscreen state (adjustable via F11 key)
             bool isFullscreen = false;
             
+            // Track whether line drawing is enabled (toggle with 'a' key)
+            bool lineDrawingEnabled = false;
+            
             // Open the default camera
             using (var capture = new VideoCapture(0))
             {
@@ -258,6 +261,7 @@ namespace ColorDetectionApp
                 Console.WriteLine("Press 'x' to toggle outlier detection (currently: ON)");
                 Console.WriteLine("Press 'r' to toggle real-time shape detection (currently: ON)");
                 Console.WriteLine("Press 'd' to decrease detection interval (more frequent), 'D' to increase (less frequent)");
+                Console.WriteLine("Press 'a' to toggle line drawing on/off");
                 Console.WriteLine("Press 'f' to flip/mirror camera");
                 Console.WriteLine("Press 'F11' to toggle fullscreen mode");
                 
@@ -395,11 +399,14 @@ namespace ColorDetectionApp
                             }
                         }
 
-                        // Draw lines connecting consecutive points
-                        for (int i = 1; i < brightestPoints.Count; i++)
+                        // Draw lines connecting consecutive points (only when line drawing is enabled)
+                        if (lineDrawingEnabled)
                         {
-                            Cv2.Line(frame, brightestPoints[i - 1], brightestPoints[i], 
-                                    new Scalar(255, 128, 0), 2);
+                            for (int i = 1; i < brightestPoints.Count; i++)
+                            {
+                                Cv2.Line(frame, brightestPoints[i - 1], brightestPoints[i], 
+                                        new Scalar(255, 128, 0), 2);
+                            }
                         }
 
                         // Draw detected shape contour if available
@@ -568,6 +575,13 @@ namespace ColorDetectionApp
                                 if (detectionFrameInterval < 5) detectionFrameInterval = 5;
                             }
                             Console.WriteLine($"Detection frame interval: every {detectionFrameInterval} frames ({ASSUMED_CAMERA_FPS/detectionFrameInterval:F1} times per second)");
+                        }
+                        else if (key == 'a' || key == 'A')
+                        {
+                            // Toggle line drawing
+                            lineDrawingEnabled = !lineDrawingEnabled;
+                            Console.WriteLine($"Line drawing: {(lineDrawingEnabled ? "ENABLED" : "DISABLED")}");
+                        }
                         else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
                         {
                             // Toggle fullscreen mode
