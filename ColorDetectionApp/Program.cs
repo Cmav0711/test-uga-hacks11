@@ -234,8 +234,8 @@ namespace ColorDetectionApp
             // Fullscreen state (adjustable via F11 key)
             bool isFullscreen = false;
             
-            // Track whether 'a' key is being held down for line drawing
-            bool isAKeyHeld = false;
+            // Track whether line drawing is enabled (toggle with 'a' key)
+            bool lineDrawingEnabled = false;
             
             // Open the default camera
             using (var capture = new VideoCapture(0))
@@ -399,8 +399,8 @@ namespace ColorDetectionApp
                             }
                         }
 
-                        // Draw lines connecting consecutive points (only when 'a' key is held)
-                        if (isAKeyHeld)
+                        // Draw lines connecting consecutive points (only when line drawing is enabled)
+                        if (lineDrawingEnabled)
                         {
                             for (int i = 1; i < brightestPoints.Count; i++)
                             {
@@ -578,9 +578,9 @@ namespace ColorDetectionApp
                         }
                         else if (key == 'a' || key == 'A')
                         {
-                            // Toggle 'a' key state for line drawing
-                            isAKeyHeld = !isAKeyHeld;
-                            Console.WriteLine($"Line drawing: {(isAKeyHeld ? "ENABLED (holding 'a')" : "DISABLED")}");
+                            // Toggle line drawing
+                            lineDrawingEnabled = !lineDrawingEnabled;
+                            Console.WriteLine($"Line drawing: {(lineDrawingEnabled ? "ENABLED" : "DISABLED")}");
                         }
                         else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
                         {
