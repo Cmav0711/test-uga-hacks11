@@ -11,6 +11,12 @@ namespace ColorDetectionApp
     /// </summary>
     public class EnhancedShapeDetector
     {
+        // Constants for line extension detection
+        private const double MIN_LINE_ASPECT_RATIO = 0.6;  // Minimum aspect ratio indicating elongation
+        private const double MAX_LINE_ASPECT_RATIO = 1.67; // Maximum aspect ratio indicating elongation
+        private const double LINE_EXTENSION_DISTANCE_RATIO_THRESHOLD = 1.8; // Distance ratio for radial lines
+        private const double UNKNOWN_SHAPE_CONFIDENCE = 0.3; // Confidence for unknown/unclassified shapes
+        
         /// <summary>
         /// Detects shapes in an image using contour analysis and geometric properties.
         /// This method is rotation-invariant, scale-invariant, and works well with
@@ -141,19 +147,31 @@ namespace ColorDetectionApp
             var convexArea = Cv2.ContourArea(convexHull);
             var convexity = area / convexArea;
 
+            // Check if contour has lines (for circle/dot detection requirement)
+            bool hasLines = HasLineExtensions(contour, rect);
+
             // Classify based on multiple features
-            return ClassifyShape(vertices, circularity, aspectRatio, convexity, area);
+            return ClassifyShape(vertices, circularity, aspectRatio, convexity, area, hasLines);
         }
 
         private static (string shape, double confidence) ClassifyShape(
-            int vertices, double circularity, double aspectRatio, double convexity, double area)
+            int vertices, double circularity, double aspectRatio, double convexity, double area, bool hasLines)
         {
-            // Circle detection
+            // Circle detection - only detect circles that have lines connected
             if (circularity > 0.75)
             {
                 // High circularity indicates a circle
-                var confidence = Math.Min(circularity, 1.0) * 0.95;
-                return ("circle", confidence);
+                // Only classify as circle if it has line extensions
+                if (hasLines)
+                {
+                    var confidence = Math.Min(circularity, 1.0) * 0.95;
+                    return ("circle", confidence);
+                }
+                else
+                {
+                    // Standalone circle without lines - classify as unknown
+                    return ("unknown", UNKNOWN_SHAPE_CONFIDENCE);
+                }
             }
 
             // Ellipse/oval detection
@@ -219,12 +237,77 @@ namespace ColorDetectionApp
                     {
                         if (circularity > 0.50)
                         {
-                            return ("circle", circularity * 0.80);
+                            // Only classify as circle if it has line extensions
+                            if (hasLines)
+                            {
+                                return ("circle", circularity * 0.80);
+                            }
+                            else
+                            {
+                                return ("unknown", UNKNOWN_SHAPE_CONFIDENCE);
+                            }
                         }
                         return ("polygon", 0.70);
                     }
                     return ($"polygon_{vertices}", 0.65);
             }
+        }
+
+        /// <summary>
+        /// Detects if a contour has line extensions (for circle/dot detection).
+        /// This implements the requirement: "only detect dots that have lines"
+        /// A circle with lines will have elongated features or asymmetric point distribution.
+        /// Standalone circles (closed circular paths without extensions) will return false.
+        /// </summary>
+        /// <param name="contour">The contour points to analyze</param>
+        /// <param name="boundingRect">The bounding rectangle of the contour</param>
+        /// <returns>True if the contour has line extensions, false otherwise</returns>
+        private static bool HasLineExtensions(Point[] contour, Rect boundingRect)
+        {
+            if (contour.Length < 5)
+                return false;
+
+            // Calculate aspect ratio of bounding box
+            double aspectRatio = (double)boundingRect.Width / boundingRect.Height;
+            
+            // If the bounding box is significantly elongated, it likely has lines
+            // Standalone circle would have aspect ratio close to 1.0
+            if (aspectRatio < MIN_LINE_ASPECT_RATIO || aspectRatio > MAX_LINE_ASPECT_RATIO)
+            {
+                return true; // Elongated shape indicates lines
+            }
+
+            // Check for point distribution - if points are spread far from center, likely has lines
+            // Calculate center of bounding box
+            Point center = new Point(
+                boundingRect.X + boundingRect.Width / 2,
+                boundingRect.Y + boundingRect.Height / 2
+            );
+
+            // Calculate average distance and max distance from center
+            double sumDistance = 0;
+            double maxDistance = 0;
+            foreach (var point in contour)
+            {
+                double dx = point.X - center.X;
+                double dy = point.Y - center.Y;
+                double distance = Math.Sqrt(dx * dx + dy * dy);
+                sumDistance += distance;
+                if (distance > maxDistance)
+                    maxDistance = distance;
+            }
+            double avgDistance = sumDistance / contour.Length;
+
+            // If max distance is significantly larger than average,
+            // it indicates line extensions from a central region
+            double distanceRatio = maxDistance / avgDistance;
+            if (distanceRatio > LINE_EXTENSION_DISTANCE_RATIO_THRESHOLD)
+            {
+                return true; // Points extend significantly from center
+            }
+
+            // If none of the above conditions are met, assume no lines
+            return false;
         }
 
         /// <summary>

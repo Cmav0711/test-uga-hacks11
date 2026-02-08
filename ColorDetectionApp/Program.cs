@@ -109,6 +109,12 @@ namespace ColorDetectionApp
                 return;
             }
 
+            if (args.Length > 0 && args[0] == "--test-dot-with-lines")
+            {
+                TestDotWithLines.RunTest();
+                return;
+            }
+
             if (args.Length > 0 && args[0] == "--contour-info")
             {
                 if (args.Length < 2)
@@ -210,6 +216,8 @@ namespace ColorDetectionApp
             
             // No-light detection timeout in seconds (adjustable via [ and ] keys)
             double noLightTimeout = 3.0;
+            const double DEFAULT_TIMEOUT = 3.0;
+            double savedTimeout = DEFAULT_TIMEOUT; // Store timeout value when toggling
             
             // Track the last time light was detected
             DateTime? lastLightDetectedTime = null;
@@ -508,12 +516,14 @@ namespace ColorDetectionApp
                         {
                             noLightTimeout -= 0.5;
                             if (noLightTimeout < 0.5) noLightTimeout = 0.5;
+                            savedTimeout = noLightTimeout; // Update saved value
                             Console.WriteLine($"No-light timeout decreased to {noLightTimeout:F1}s");
                         }
                         else if (key == ']' || key == '}')
                         {
                             noLightTimeout += 0.5;
                             if (noLightTimeout > 30.0) noLightTimeout = 30.0;
+                            savedTimeout = noLightTimeout; // Update saved value
                             Console.WriteLine($"No-light timeout increased to {noLightTimeout:F1}s");
                         }
                         else if (key == 'o' || key == 'O')
@@ -581,6 +591,19 @@ namespace ColorDetectionApp
                             // Toggle line drawing
                             lineDrawingEnabled = !lineDrawingEnabled;
                             Console.WriteLine($"Line drawing: {(lineDrawingEnabled ? "ENABLED" : "DISABLED")}");
+                            
+                            // Toggle timeout between 0.0 and saved value (default 3.0)
+                            if (noLightTimeout > 0.0)
+                            {
+                                savedTimeout = noLightTimeout; // Save current timeout
+                                noLightTimeout = 0.0;
+                                Console.WriteLine($"No-light timeout set to 0.0s (instant export)");
+                            }
+                            else
+                            {
+                                noLightTimeout = savedTimeout; // Restore saved timeout
+                                Console.WriteLine($"No-light timeout restored to {noLightTimeout:F1}s");
+                            }
                         }
                         else if (key == F11_KEY_CODE_PRIMARY || key == F11_KEY_CODE_ALTERNATE)
                         {
