@@ -11,6 +11,12 @@ namespace ColorDetectionApp
     /// </summary>
     public class EnhancedShapeDetector
     {
+        // Constants for line extension detection
+        private const double MIN_LINE_ASPECT_RATIO = 0.6;  // Minimum aspect ratio indicating elongation
+        private const double MAX_LINE_ASPECT_RATIO = 1.67; // Maximum aspect ratio indicating elongation
+        private const double LINE_EXTENSION_DISTANCE_RATIO_THRESHOLD = 1.8; // Distance ratio for radial lines
+        private const double UNKNOWN_SHAPE_CONFIDENCE = 0.3; // Confidence for unknown/unclassified shapes
+        
         /// <summary>
         /// Detects shapes in an image using contour analysis and geometric properties.
         /// This method is rotation-invariant, scale-invariant, and works well with
@@ -164,7 +170,7 @@ namespace ColorDetectionApp
                 else
                 {
                     // Standalone circle without lines - classify as unknown
-                    return ("unknown", 0.3);
+                    return ("unknown", UNKNOWN_SHAPE_CONFIDENCE);
                 }
             }
 
@@ -238,7 +244,7 @@ namespace ColorDetectionApp
                             }
                             else
                             {
-                                return ("unknown", 0.3);
+                                return ("unknown", UNKNOWN_SHAPE_CONFIDENCE);
                             }
                         }
                         return ("polygon", 0.70);
@@ -266,7 +272,7 @@ namespace ColorDetectionApp
             
             // If the bounding box is significantly elongated, it likely has lines
             // Standalone circle would have aspect ratio close to 1.0
-            if (aspectRatio < 0.6 || aspectRatio > 1.67)
+            if (aspectRatio < MIN_LINE_ASPECT_RATIO || aspectRatio > MAX_LINE_ASPECT_RATIO)
             {
                 return true; // Elongated shape indicates lines
             }
@@ -292,10 +298,10 @@ namespace ColorDetectionApp
             }
             double avgDistance = sumDistance / contour.Length;
 
-            // If max distance is significantly larger than average (more than 1.8x),
+            // If max distance is significantly larger than average,
             // it indicates line extensions from a central region
             double distanceRatio = maxDistance / avgDistance;
-            if (distanceRatio > 1.8)
+            if (distanceRatio > LINE_EXTENSION_DISTANCE_RATIO_THRESHOLD)
             {
                 return true; // Points extend significantly from center
             }
