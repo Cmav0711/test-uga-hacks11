@@ -353,16 +353,7 @@ namespace ColorDetectionApp
                             (DateTime.Now - lastLightDetectedTime.Value).TotalSeconds >= noLightTimeout)
                         {
                             // Apply outlier detection if enabled
-                            var pointsToExport = brightestPoints;
-                            if (outlierDetectionEnabled && brightestPoints.Count >= 4)
-                            {
-                                var originalCount = brightestPoints.Count;
-                                pointsToExport = OutlierDetection.RemoveOutliersHybrid(brightestPoints);
-                                if (pointsToExport.Count < originalCount)
-                                {
-                                    Console.WriteLine($"\nOutlier detection: Removed {originalCount - pointsToExport.Count} outlier(s) from {originalCount} points");
-                                }
-                            }
+                            var pointsToExport = ApplyOutlierDetectionIfEnabled(brightestPoints, outlierDetectionEnabled);
                             
                             // Export the drawing to PNG and CSV
                             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -420,8 +411,8 @@ namespace ColorDetectionApp
                             }
                         }
 
-                        // Draw lines connecting consecutive points (only when in Drawing mode OR line drawing is explicitly enabled)
-                        if (currentMode == TrackingMode.Drawing || lineDrawingEnabled)
+                        // Draw lines connecting consecutive points (only in Drawing mode)
+                        if (currentMode == TrackingMode.Drawing)
                         {
                             for (int i = 1; i < brightestPoints.Count; i++)
                             {
@@ -623,16 +614,7 @@ namespace ColorDetectionApp
                             if (previousMode == TrackingMode.Drawing && currentMode == TrackingMode.Cursor && brightestPoints.Count > 0)
                             {
                                 // Apply outlier detection if enabled
-                                var pointsToExport = brightestPoints;
-                                if (outlierDetectionEnabled && brightestPoints.Count >= 4)
-                                {
-                                    var originalCount = brightestPoints.Count;
-                                    pointsToExport = OutlierDetection.RemoveOutliersHybrid(brightestPoints);
-                                    if (pointsToExport.Count < originalCount)
-                                    {
-                                        Console.WriteLine($"Outlier detection: Removed {originalCount - pointsToExport.Count} outlier(s) from {originalCount} points");
-                                    }
-                                }
+                                var pointsToExport = ApplyOutlierDetectionIfEnabled(brightestPoints, outlierDetectionEnabled);
                                 
                                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                                 string pngFilename = $"drawing_mode_{timestamp}.png";
@@ -660,16 +642,7 @@ namespace ColorDetectionApp
                             else if (previousMode == TrackingMode.Cursor && currentMode == TrackingMode.Drawing && brightestPoints.Count > 0)
                             {
                                 // Apply outlier detection if enabled
-                                var pointsToExport = brightestPoints;
-                                if (outlierDetectionEnabled && brightestPoints.Count >= 4)
-                                {
-                                    var originalCount = brightestPoints.Count;
-                                    pointsToExport = OutlierDetection.RemoveOutliersHybrid(brightestPoints);
-                                    if (pointsToExport.Count < originalCount)
-                                    {
-                                        Console.WriteLine($"Outlier detection: Removed {originalCount - pointsToExport.Count} outlier(s) from {originalCount} points");
-                                    }
-                                }
+                                var pointsToExport = ApplyOutlierDetectionIfEnabled(brightestPoints, outlierDetectionEnabled);
                                 
                                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                                 string csvFilename = $"cursor_mode_{timestamp}.csv";
@@ -942,6 +915,25 @@ namespace ColorDetectionApp
             }
 
             return mat;
+        }
+
+        /// <summary>
+        /// Applies outlier detection to a list of points if enabled.
+        /// Returns the filtered list of points and logs statistics if outliers were removed.
+        /// </summary>
+        static List<OpenCvSharp.Point> ApplyOutlierDetectionIfEnabled(List<OpenCvSharp.Point> points, bool outlierDetectionEnabled)
+        {
+            if (outlierDetectionEnabled && points.Count >= 4)
+            {
+                var originalCount = points.Count;
+                var filteredPoints = OutlierDetection.RemoveOutliersHybrid(points);
+                if (filteredPoints.Count < originalCount)
+                {
+                    Console.WriteLine($"Outlier detection: Removed {originalCount - filteredPoints.Count} outlier(s) from {originalCount} points");
+                }
+                return filteredPoints;
+            }
+            return points;
         }
 
         static void ExportPointsToCsv(List<OpenCvSharp.Point> points, string filename)
